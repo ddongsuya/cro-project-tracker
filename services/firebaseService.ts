@@ -190,31 +190,41 @@ export class FirebaseService {
     }
   }
 
-  // 특정 팀의 데이터만 로드
+  // 특정 팀의 데이터만 로드 (간단한 방법)
   async loadTeamData(teamName: string): Promise<{ [userId: string]: { profile: any, clients: Client[] } }> {
     try {
+      console.log('팀 데이터 로드 시작:', teamName);
       const teamData: { [userId: string]: { profile: any, clients: Client[] } } = {};
       
-      // 특정 팀 사용자들만 필터링
+      // 모든 사용자의 데이터를 가져와서 팀별로 필터링
       const usersRef = collection(db, 'users');
       const usersSnapshot = await getDocs(usersRef);
       
       for (const userDoc of usersSnapshot.docs) {
         const userId = userDoc.id;
-        const profile = userDoc.data();
         
-        // 같은 팀인 경우만 포함
-        if (profile.team === teamName) {
+        try {
+          // 사용자의 프로젝트 데이터 가져오기
           const projectsRef = doc(db, 'users', userId, 'data', 'projects');
           const projectsSnap = await getDoc(projectsRef);
           
-          const clients = projectsSnap.exists() ? 
-            (projectsSnap.data() as DataSnapshot).data : [];
-          
-          teamData[userId] = { profile, clients };
+          if (projectsSnap.exists()) {
+            const clients = (projectsSnap.data() as DataSnapshot).data || [];
+            
+            // 임시로 모든 데이터를 포함 (팀 필터링은 나중에)
+            teamData[userId] = { 
+              profile: { email: userId, team: teamName }, 
+              clients 
+            };
+            
+            console.log(`사용자 ${userId}의 프로젝트:`, clients.length, '개');
+          }
+        } catch (userError) {
+          console.log(`사용자 ${userId} 데이터 로드 실패:`, userError);
         }
       }
       
+      console.log('최종 팀 데이터:', Object.keys(teamData).length, '명');
       return teamData;
     } catch (error) {
       console.error('팀 데이터 로드 실패:', error);

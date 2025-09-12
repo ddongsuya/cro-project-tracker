@@ -39,19 +39,27 @@ const TeamDashboard: React.FC<TeamDashboardProps> = ({ clients, currentUser }) =
 
   const loadTeamData = async () => {
     try {
+      console.log('팀 데이터 로드 시작...');
+      
       // 현재 사용자의 팀 정보 가져오기
       const members = await firebaseService.getTeamMembers();
+      console.log('팀 멤버들:', members);
       setAllTeamMembers(members);
       
       const currentMember = members.find(m => m.email === currentUser?.email);
+      console.log('현재 사용자:', currentMember);
+      
       if (currentMember) {
         setCurrentUserTeam(currentMember.team);
         
         // 팀 전체 데이터 로드
         const allTeamData = await firebaseService.loadTeamData(currentMember.team);
+        console.log('팀 데이터:', allTeamData);
         setTeamData(allTeamData);
         
         calculateTeamStats(currentMember.team, members, allTeamData);
+      } else {
+        console.log('현재 사용자를 팀 멤버에서 찾을 수 없음');
       }
     } catch (error) {
       console.error('팀 데이터 로드 실패:', error);
@@ -61,12 +69,17 @@ const TeamDashboard: React.FC<TeamDashboardProps> = ({ clients, currentUser }) =
   };
 
   const calculateTeamStats = (userTeam: string, members: TeamMember[], teamData: { [userId: string]: { profile: any, clients: Client[] } }) => {
+    console.log('팀 통계 계산 시작:', { userTeam, teamDataKeys: Object.keys(teamData) });
+    
     const teamMembers = members.filter(m => m.team === userTeam);
+    console.log('팀 멤버들:', teamMembers);
     
     // 팀원들의 모든 프로젝트 취합
     const allProjects = Object.values(teamData).flatMap(userData => 
       userData.clients.flatMap(c => c.requesters.flatMap(r => r.projects))
     );
+    
+    console.log('취합된 프로젝트들:', allProjects);
     
     const completedProjects = allProjects.filter(p => {
       const completedStages = p.stages.filter(s => s.status === '완료').length;

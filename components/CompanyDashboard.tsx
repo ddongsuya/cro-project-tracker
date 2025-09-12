@@ -50,7 +50,7 @@ const CompanyDashboard: React.FC<CompanyDashboardProps> = ({ clients, currentUse
     try {
       const members = await firebaseService.getTeamMembers();
       setAllTeamMembers(members);
-      calculateCompanyStats(members);
+      await calculateCompanyStats(members);
     } catch (error) {
       console.error('회사 데이터 로드 실패:', error);
     } finally {
@@ -58,34 +58,59 @@ const CompanyDashboard: React.FC<CompanyDashboardProps> = ({ clients, currentUse
     }
   };
 
-  const calculateCompanyStats = (members: TeamMember[]) => {
+  const calculateCompanyStats = async (members: TeamMember[]) => {
     const team1Members = members.filter(m => m.team === 'business_dev_1');
     const team2Members = members.filter(m => m.team === 'business_dev_2');
     
-    // 전체 프로젝트 데이터 (실제로는 팀별로 분리해야 하지만 임시로 전체 사용)
-    const allProjects = clients.flatMap(c => c.requesters.flatMap(r => r.projects));
+    console.log('전체 회사 통계 계산:', { team1Count: team1Members.length, team2Count: team2Members.length });
     
-    const totalQuoted = allProjects.reduce((sum, p) => sum + p.quotedAmount, 0);
-    const totalContracted = allProjects.reduce((sum, p) => sum + (p.contractedAmount || 0), 0);
+    // 실제 팀별 데이터 로드
+    const team1Data = await firebaseService.loadTeamData('business_dev_1');
+    const team2Data = await firebaseService.loadTeamData('business_dev_2');
+    
+    // 팀1 프로젝트 취합
+    const team1Projects = Object.values(team1Data).flatMap(userData => 
+      userData.clients.flatMap(c => c.requesters.flatMap(r => r.projects))
+    );
+    
+    // 팀2 프로젝트 취합
+    const team2Projects = Object.values(team2Data).flatMap(userData => 
+      userData.clients.flatMap(c => c.requesters.flatMap(r => r.projects))
+    );
+    
+    const allProjects = [...team1Projects, ...team2Projects];
+    
+    // 팀1 통계
+    const team1Quoted = team1Projects.reduce((sum, p) => sum + p.quotedAmount, 0);
+    const team1Contracted = team1Projects.reduce((sum, p) => sum + (p.contractedAmount || 0), 0);
+    const team1ContractRate = team1Quoted > 0 ? (team1Contracted / team1Quoted) * 100 : 0;
+    
+    // 팀2 통계
+    const team2Quoted = team2Projects.reduce((sum, p) => sum + p.quotedAmount, 0);
+    const team2Contracted = team2Projects.reduce((sum, p) => sum + (p.contractedAmount || 0), 0);
+    const team2ContractRate = team2Quoted > 0 ? (team2Contracted / team2Quoted) * 100 : 0;
+    
+    // 전체 통계
+    const totalQuoted = team1Quoted + team2Quoted;
+    const totalContracted = team1Contracted + team2Contracted;
     const contractRate = totalQuoted > 0 ? (totalContracted / totalQuoted) * 100 : 0;
 
-    // 팀별 성과 (임시로 절반씩 분배)
     const team1Performance: TeamPerformance = {
       name: '사업개발 1팀',
       members: team1Members.length,
-      projects: Math.ceil(allProjects.length * 0.6), // 1팀이 60%
-      quoted: totalQuoted * 0.6,
-      contracted: totalContracted * 0.6,
-      contractRate: contractRate
+      projects: team1Projects.length,
+      quoted: team1Quoted,
+      contracted: team1Contracted,
+      contractRate: team1ContractRate
     };
 
     const team2Performance: TeamPerformance = {
       name: '사업개발 2팀',
       members: team2Members.length,
-      projects: Math.floor(allProjects.length * 0.4), // 2팀이 40%
-      quoted: totalQuoted * 0.4,
-      contracted: totalContracted * 0.4,
-      contractRate: contractRate
+      projects: team2Projects.length,
+      quoted: team2Quoted,
+      contracted: team2Contracted,
+      contractRate: team2ContractRate
     };
 
     setCompanyStats({

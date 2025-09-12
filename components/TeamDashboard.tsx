@@ -81,6 +81,37 @@ const TeamDashboard: React.FC<TeamDashboardProps> = ({ clients, currentUser }) =
     
     console.log('취합된 프로젝트들:', allProjects);
     
+    // 임시로 현재 사용자의 개인 데이터라도 표시
+    if (allProjects.length === 0 && clients.length > 0) {
+      console.log('팀 데이터가 없어서 개인 데이터 사용:', clients);
+      const personalProjects = clients.flatMap(c => c.requesters.flatMap(r => r.projects));
+      console.log('개인 프로젝트들:', personalProjects);
+      
+      const completedProjects = personalProjects.filter(p => {
+        const completedStages = p.stages.filter(s => s.status === '완료').length;
+        return completedStages === p.stages.length;
+      });
+
+      const totalQuoted = personalProjects.reduce((sum, p) => sum + p.quotedAmount, 0);
+      const totalContracted = personalProjects.reduce((sum, p) => sum + (p.contractedAmount || 0), 0);
+      const contractRate = totalQuoted > 0 ? (totalContracted / totalQuoted) * 100 : 0;
+
+      const teamName = getTeamName(userTeam);
+
+      setTeamStats({
+        teamName,
+        memberCount: teamMembers.length || 1,
+        totalProjects: personalProjects.length,
+        completedProjects: completedProjects.length,
+        totalQuoted,
+        totalContracted,
+        contractRate,
+        members: teamMembers,
+        recentActivities: []
+      });
+      return;
+    }
+    
     const completedProjects = allProjects.filter(p => {
       const completedStages = p.stages.filter(s => s.status === '완료').length;
       return completedStages === p.stages.length;

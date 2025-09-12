@@ -18,7 +18,17 @@ import TestForm from './components/forms/TestForm';
 import RequesterForm from './components/forms/RequesterForm';
 import AIInsights from './components/AIInsights';
 import PrintReport from './components/PrintReport';
+import AuthModal from './components/AuthModal';
+import TeamManagement from './components/TeamManagement';
+import TeamDashboard from './components/TeamDashboard';
+import CompanyDashboard from './components/CompanyDashboard';
+import Calendar from './components/Calendar';
+import { FirebaseService } from './services/firebaseService';
 import { useForceUpdate } from './hooks/useForceUpdate';
+import { useIsMobile } from './hooks/useMediaQuery';
+import MobileBottomNav from './components/MobileBottomNav';
+import MobileHeader from './components/MobileHeader';
+import MobileClientDrawer from './components/MobileClientDrawer';
 
 type ModalState = 
   | { type: 'NONE' }
@@ -30,10 +40,10 @@ type ModalState =
   | { type: 'EDIT_TEST', test: Test }
   | { type: 'DATA_MANAGEMENT' }
   | { type: 'PRINT_REPORT' }
-  | { type: 'DATA_MANAGEMENT' }
-  | { type: 'PRINT_REPORT' };
+  | { type: 'AUTH' }
+  | { type: 'TEAM_MANAGEMENT' };
 
-type ViewMode = 'dashboard' | 'projects';
+type ViewMode = 'dashboard' | 'team-dashboard' | 'company-dashboard' | 'calendar' | 'projects';
 
 function App() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -42,77 +52,52 @@ function App() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
   const [isSearchActive, setIsSearchActive] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isFirebaseMode, setIsFirebaseMode] = useState(false);
+  const [showMobileClientDrawer, setShowMobileClientDrawer] = useState(false);
   
   const forceUpdate = useForceUpdate();
+  const firebaseService = FirebaseService.getInstance();
+  const isMobile = useIsMobile();
   
   const [modalState, setModalState] = useState<ModalState>({ type: 'NONE' });
 
-  // 데이터 로드 및 저장
+  // Firebase 인증 상태 관리
   useEffect(() => {
-    const savedData = StorageService.loadData();
-    let initialData = savedData || EXACT_EXCEL_CLIENTS;
-    
-    // 새로운 구조로 마이그레이션 및 기존 6단계 데이터를 7단계로 마이그레이션
-    initialData = initialData.map(client => {
-      // 기존 구조(projects 직접 포함)에서 새 구조(requesters 포함)로 마이그레이션
-      if ('projects' in client && !('requesters' in client)) {
-        // 기존 구조를 새 구조로 변환
-        const legacyClient = client as any;
-        return {
-          ...client,
-          requesters: legacyClient.projects.length > 0 ? [{
-            id: `req-${client.id}-1`,
-            name: legacyClient.contactPerson || '담당자',
-            email: legacyClient.email || '',
-            phone: legacyClient.phone || '',
-            department: '기본부서',
-            position: '담당자',
-            projects: legacyClient.projects.map((project: any) => ({
-              ...project,
-              stages: project.stages.length < 7 
-                ? [...project.stages, { 
-                    ...DEFAULT_STAGES[6], 
-                    id: `stage-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` 
-                  }]
-                : project.stages
-            }))
-          }] : []
-        };
+    const unsubscribe = firebaseService.onAuthStateChange((user) => {
+      setCurrentUser(user);
+      // 로그인하면 자동으로 Firebase 모드 활성화
+      if (user) {
+        setIsFirebaseMode(true);
+        loadFirebaseData();
       } else {
-        // 이미 새 구조인 경우 7단계 마이그레이션만 수행
-        return {
-          ...client,
-          requesters: client.requesters.map(requester => ({
-            ...requester,
-            projects: requester.projects.map(project => ({
-              ...project,
-              stages: project.stages.length < 7 
-                ? [...project.stages, { 
-                    ...DEFAULT_STAGES[6], 
-                    id: `stage-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` 
-                  }]
-                : project.stages
-            }))
-          }))
-        };
+        setIsFirebaseMode(false);
       }
     });
-    
-    setClients(initialData);
-    setFilteredClients(initialData);
-    
-    if (initialData.length > 0) {
-      setSelectedClientId(initialData[0].id);
-      setSelectedProjectId(null); // 초기 로드 시에도 프로젝트는 선택하지 않음
-    }
+
+    return () => unsubscribe();
   }, []);
 
-  // 데이터 변경시 자동 저장
+  // 데이터 로드 및 저장 (로그인 사용자만)
   useEffect(() => {
-    if (clients.length > 0) {
-      StorageService.saveData(clients);
+    if (currentUser) {
+      loadFirebaseData();
+      return;
     }
-  }, [clients]);
+    
+    // 로그인하지 않은 경우 데이터 로드하지 않음
+    setClients([]);
+    setFilteredClients([]);
+    // 로그인하지 않은 경우 더미 데이터도 로드하지 않음
+  }, []);
+
+  // 데이터 변경시 자동 저장 (로그인 사용자만)
+  useEffect(() => {
+    if (clients.length > 0 && currentUser) {
+      // Firebase에만 저장 (로컬 저장 제거)
+      firebaseService.saveData(clients).catch(console.error);
+    }
+  }, [clients, currentUser]);
 
   // clients가 변경될 때마다 filteredClients 업데이트 (검색이 활성화되지 않은 경우에만)
   useEffect(() => {
@@ -120,6 +105,37 @@ function App() {
       setFilteredClients(clients);
     }
   }, [clients, isSearchActive]);
+
+  // Firebase 데이터 로드
+  const loadFirebaseData = async () => {
+    try {
+      const firebaseData = await firebaseService.loadData();
+      if (firebaseData) {
+        setClients(firebaseData);
+        setFilteredClients(firebaseData);
+        if (firebaseData.length > 0) {
+          setSelectedClientId(firebaseData[0].id);
+          setSelectedProjectId(null);
+        }
+      }
+    } catch (error) {
+      console.error('Firebase 데이터 로드 실패:', error);
+    }
+  };
+
+  // Firebase 실시간 동기화
+  useEffect(() => {
+    if (isFirebaseMode && currentUser) {
+      const unsubscribe = firebaseService.onDataChange((firebaseClients) => {
+        setClients(firebaseClients);
+        if (!isSearchActive) {
+          setFilteredClients(firebaseClients);
+        }
+      });
+
+      return () => unsubscribe();
+    }
+  }, [isFirebaseMode, currentUser, isSearchActive]);
 
   const selectedClient = filteredClients.find(c => c.id === selectedClientId);
   
@@ -465,57 +481,174 @@ function App() {
   };
 
 
-  return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 font-sans">
-      {/* 사이드바 */}
-      <div className="w-80 bg-white/95 backdrop-blur-sm shadow-2xl border-r border-slate-200/60 flex flex-col">
-        {/* 로고/헤더 */}
-        <div className="p-6 border-b border-slate-200/60 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-purple-600/90"></div>
-          <div className="relative z-10">
-            <h1 className="text-xl font-bold text-white flex items-center gap-2">
-              <span className="text-2xl">🧪</span>
-              CRO Project Tracker
-            </h1>
-            <p className="text-blue-100 text-sm mt-1 font-medium">프로젝트 관리 시스템</p>
+  // 로그인하지 않은 경우 로그인 화면만 표시
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center font-sans">
+        <div className={`bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl ${isMobile ? 'p-8' : 'p-12'} max-w-md w-full mx-4 border border-white/20`}>
+          <div className="text-center mb-8">
+            <div className={`${isMobile ? 'text-5xl' : 'text-6xl'} mb-4`}>🧪</div>
+            <h1 className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold text-slate-800 mb-2`}>CRO Project Tracker</h1>
+            <p className="text-slate-600">프로젝트 관리 시스템</p>
+            <p className="text-sm text-slate-500 mt-2">팀원 전용 - 로그인이 필요합니다</p>
           </div>
-          <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
-          <div className="absolute -bottom-2 -left-2 w-16 h-16 bg-white/5 rounded-full blur-lg"></div>
+          
+          <button
+            onClick={() => setModalState({ type: 'AUTH' })}
+            className="w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 font-semibold text-lg"
+          >
+            🔥 팀 협업 시작하기
+          </button>
+          
+          <div className="mt-8 p-4 bg-blue-50 rounded-xl">
+            <h3 className="font-semibold text-blue-800 mb-2">✨ 팀 협업 기능</h3>
+            <ul className="text-sm text-blue-700 space-y-1">
+              <li>• 실시간 데이터 동기화</li>
+              <li>• 사업개발 1팀 & 2팀 분리 관리</li>
+              <li>• 개인/팀/전체 대시보드</li>
+              <li>• 일정 관리 및 알림</li>
+              <li>• 권한별 접근 제어</li>
+            </ul>
+          </div>
         </div>
         
-        {/* 클라이언트 목록 */}
-        <div className="flex-1 overflow-hidden">
-          <ClientList
-            clients={filteredClients}
-            selectedClientId={selectedClientId}
-            onSelectClient={handleSelectClient}
-            onAddClient={() => setModalState({ type: 'ADD_CLIENT' })}
-            onDeleteClient={handleDeleteClient}
-          />
-        </div>
+        <AuthModal
+          isOpen={modalState.type === 'AUTH'}
+          onClose={() => setModalState({ type: 'NONE' })}
+          onSuccess={() => setModalState({ type: 'NONE' })}
+        />
       </div>
+    );
+  }
+
+  return (
+    <div className={`${isMobile ? 'flex flex-col' : 'flex'} h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 font-sans`}>
+      {/* 데스크톱 사이드바 */}
+      {!isMobile && (
+        <div className="w-80 bg-white/95 backdrop-blur-sm shadow-2xl border-r border-slate-200/60 flex flex-col">
+          {/* 로고/헤더 */}
+          <div className="p-6 border-b border-slate-200/60 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-purple-600/90"></div>
+            <div className="relative z-10">
+              <h1 className="text-xl font-bold text-white flex items-center gap-2">
+                <span className="text-2xl">🧪</span>
+                CRO Project Tracker
+              </h1>
+              <p className="text-blue-100 text-sm mt-1 font-medium">프로젝트 관리 시스템</p>
+            </div>
+            <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
+            <div className="absolute -bottom-2 -left-2 w-16 h-16 bg-white/5 rounded-full blur-lg"></div>
+          </div>
+          
+          {/* 클라이언트 목록 */}
+          <div className="flex-1 overflow-hidden">
+            <ClientList
+              clients={filteredClients}
+              selectedClientId={selectedClientId}
+              onSelectClient={handleSelectClient}
+              onAddClient={() => setModalState({ type: 'ADD_CLIENT' })}
+              onDeleteClient={handleDeleteClient}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 모바일 클라이언트 드로어 */}
+      {isMobile && (
+        <MobileClientDrawer
+          isOpen={showMobileClientDrawer}
+          onClose={() => setShowMobileClientDrawer(false)}
+          clients={filteredClients}
+          selectedClientId={selectedClientId}
+          onSelectClient={handleSelectClient}
+          onAddClient={() => setModalState({ type: 'ADD_CLIENT' })}
+          onDeleteClient={handleDeleteClient}
+        />
+      )}
       
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* 상단 네비게이션 */}
-        <header className="bg-white/95 backdrop-blur-sm shadow-lg border-b border-slate-200/60 px-8 py-5">
+        {/* 모바일 헤더 */}
+        {isMobile ? (
+          <MobileHeader
+            currentUser={currentUser}
+            clients={clients}
+            onOpenAuth={() => setModalState({ type: 'AUTH' })}
+            onOpenTeamManagement={() => setModalState({ type: 'TEAM_MANAGEMENT' })}
+            onOpenPrintReport={() => setModalState({ type: 'PRINT_REPORT' })}
+            onOpenDataManagement={() => setModalState({ type: 'DATA_MANAGEMENT' })}
+            onSignOut={async () => {
+              await firebaseService.signOut();
+              setIsFirebaseMode(false);
+            }}
+            isFirebaseMode={isFirebaseMode}
+            selectedClient={selectedClient}
+            onToggleClientList={() => setShowMobileClientDrawer(true)}
+          />
+        ) : (
+          /* 데스크톱 상단 네비게이션 */
+          <header className="bg-white/95 backdrop-blur-sm shadow-lg border-b border-slate-200/60 px-8 py-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-6">
-              <nav className="flex gap-2 bg-gradient-to-r from-slate-100 to-slate-50 p-1.5 rounded-xl shadow-inner">
+              <nav className="flex gap-1 bg-gradient-to-r from-slate-100 to-slate-50 p-1.5 rounded-xl shadow-inner">
                 <button
                   onClick={() => setViewMode('dashboard')}
-                  className={`px-6 py-3 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
+                  className={`px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
                     viewMode === 'dashboard'
                       ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-white/80 hover:shadow-md'
                   }`}
                 >
                   <span className="flex items-center gap-2">
-                    📊 <span>대시보드</span>
+                    📊 <span>내 대시보드</span>
                   </span>
                 </button>
+                
+                {isFirebaseMode && currentUser && (
+                  <>
+                    <button
+                      onClick={() => setViewMode('team-dashboard')}
+                      className={`px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
+                        viewMode === 'team-dashboard'
+                          ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/25'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/80 hover:shadow-md'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        👥 <span>팀 대시보드</span>
+                      </span>
+                    </button>
+                    
+                    <button
+                      onClick={() => setViewMode('company-dashboard')}
+                      className={`px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
+                        viewMode === 'company-dashboard'
+                          ? 'bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-lg shadow-purple-500/25'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/80 hover:shadow-md'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        🏢 <span>전체 대시보드</span>
+                      </span>
+                    </button>
+                    
+                    <button
+                      onClick={() => setViewMode('calendar')}
+                      className={`px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
+                        viewMode === 'calendar'
+                          ? 'bg-gradient-to-r from-orange-600 to-red-600 text-white shadow-lg shadow-orange-500/25'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/80 hover:shadow-md'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        📅 <span>일정 관리</span>
+                      </span>
+                    </button>
+                  </>
+                )}
+                
                 <button
                   onClick={() => setViewMode('projects')}
-                  className={`px-6 py-3 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
+                  className={`px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
                     viewMode === 'projects'
                       ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-white/80 hover:shadow-md'
@@ -529,6 +662,43 @@ function App() {
             </div>
             
             <div className="flex items-center gap-4">
+              {/* 로그인/로그아웃 */}
+              {currentUser ? (
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg border border-green-200">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm text-green-700 font-medium">팀 협업 활성</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-slate-600">{currentUser.email}</span>
+                    <button
+                      onClick={() => setModalState({ type: 'TEAM_MANAGEMENT' })}
+                      className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition-colors"
+                    >
+                      팀 관리
+                    </button>
+                    <button
+                      onClick={async () => {
+                        await firebaseService.signOut();
+                        setIsFirebaseMode(false);
+                      }}
+                      className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors"
+                    >
+                      로그아웃
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setModalState({ type: 'AUTH' })}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 rounded-lg hover:from-blue-200 hover:to-indigo-200 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+                >
+                  <span className="text-lg">🔥</span>
+                  <span className="font-medium">팀 협업 시작</span>
+                </button>
+              )}
+
               <button
                 onClick={() => setModalState({ type: 'PRINT_REPORT' })}
                 className="flex items-center gap-2 px-5 py-3 text-sm bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 rounded-xl hover:from-indigo-200 hover:to-purple-200 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
@@ -547,9 +717,10 @@ function App() {
             </div>
           </div>
         </header>
+        )}
 
         {/* 메인 콘텐츠 */}
-        <div className="flex-1 overflow-y-auto p-8 bg-gradient-to-br from-slate-50/80 via-blue-50/40 to-indigo-50/60 relative">
+        <div className={`flex-1 overflow-y-auto ${isMobile ? 'p-4 pb-20' : 'p-8'} bg-gradient-to-br from-slate-50/80 via-blue-50/40 to-indigo-50/60 relative`}>
           <div className="absolute inset-0 opacity-30">
             <div className="w-full h-full" style={{
               backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23f1f5f9' fill-opacity='0.4'%3E%3Ccircle cx='7' cy='7' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
@@ -559,12 +730,23 @@ function App() {
           <div className="relative z-10">
           {viewMode === 'dashboard' ? (
             <Dashboard clients={clients} />
+          ) : viewMode === 'team-dashboard' ? (
+            <TeamDashboard clients={clients} currentUser={currentUser} />
+          ) : viewMode === 'company-dashboard' ? (
+            <CompanyDashboard clients={clients} currentUser={currentUser} />
+          ) : viewMode === 'calendar' ? (
+            <Calendar 
+              currentUser={currentUser} 
+              viewScope={currentUser ? 'team' : 'personal'} 
+            />
           ) : (
             <div className="space-y-6">
-              <SearchAndFilter 
-                clients={clients} 
-                onFilteredResults={handleFilteredResults}
-              />
+              {!isMobile && (
+                <SearchAndFilter 
+                  clients={clients} 
+                  onFilteredResults={handleFilteredResults}
+                />
+              )}
               
               {selectedClient && selectedProject ? (
                 <div className="space-y-8">
@@ -688,6 +870,33 @@ function App() {
           selectedProject={selectedProject}
         />
       </Modal>
+
+      <AuthModal
+        isOpen={modalState.type === 'AUTH'}
+        onClose={() => setModalState({ type: 'NONE' })}
+        onSuccess={() => {
+          // 로그인 성공 시 자동으로 Firebase 모드 활성화 (이미 useEffect에서 처리됨)
+          setModalState({ type: 'NONE' });
+        }}
+      />
+
+      <Modal
+        isOpen={modalState.type === 'TEAM_MANAGEMENT'}
+        onClose={() => setModalState({ type: 'NONE' })}
+        title="팀 관리"
+      >
+        <TeamManagement currentUser={currentUser} />
+      </Modal>
+
+      {/* 모바일 하단 네비게이션 */}
+      {isMobile && (
+        <MobileBottomNav
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          isFirebaseMode={isFirebaseMode}
+          currentUser={currentUser}
+        />
+      )}
 
     </div>
   );

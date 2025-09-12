@@ -28,7 +28,7 @@ const firebaseConfig = {
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: "1:845390790357:web:227bb9fa7bd7b4968d6c5c"
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 // Firebase 초기화

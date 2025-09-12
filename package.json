@@ -1,0 +1,30 @@
+{
+  "name": "cro-project-tracker",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "build:prod": "vite build --mode production",
+    "serve": "vite preview --port 4173"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.61.0",
+    "@types/papaparse": "^5.3.16",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.2",
+    "papaparse": "^5.5.3",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "tesseract.js": "^6.0.1"
+  },
+  "devDependencies": {
+    "@types/jspdf": "^2.0.0",
+    "@types/node": "^22.14.0",
+    "terser": "^5.44.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
+}

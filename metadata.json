@@ -1,0 +1,5 @@
+{
+  "name": "CRO Project Tracker",
+  "description": "A web application for a non-clinical CRO consultant to manage and visualize client project histories in a timeline format.",
+  "requestFramePermissions": []
+}

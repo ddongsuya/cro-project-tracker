@@ -4,6 +4,7 @@ import {
   doc, 
   setDoc, 
   getDoc, 
+  getDocs,
   onSnapshot, 
   collection, 
   query, 
@@ -103,7 +104,7 @@ export class FirebaseService {
     });
   }
 
-  // 데이터 관리
+  // 개인 데이터 관리
   async saveData(clients: Client[]): Promise<void> {
     if (!this.currentUser) throw new Error('사용자가 로그인되지 않았습니다.');
 
@@ -114,15 +115,19 @@ export class FirebaseService {
       version: Date.now()
     };
 
-    await setDoc(doc(db, 'projectData', 'main'), dataSnapshot);
+    // 개인 데이터 저장 (사용자별 분리)
+    await setDoc(doc(db, 'users', this.currentUser.uid, 'data', 'projects'), dataSnapshot);
     
     // 활동 로그 저장
     await this.logActivity('data_updated', `데이터가 업데이트되었습니다 (${clients.length}개 고객사)`);
   }
 
+  // 개인 데이터 로드
   async loadData(): Promise<Client[] | null> {
+    if (!this.currentUser) return null;
+    
     try {
-      const docRef = doc(db, 'projectData', 'main');
+      const docRef = doc(db, 'users', this.currentUser.uid, 'data', 'projects');
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
@@ -131,24 +136,90 @@ export class FirebaseService {
       }
       return null;
     } catch (error) {
-      console.error('데이터 로드 실패:', error);
+      console.error('개인 데이터 로드 실패:', error);
       return null;
     }
   }
 
-  // 실시간 데이터 동기화
+  // 개인 데이터 실시간 동기화
   onDataChange(callback: (clients: Client[]) => void): () => void {
-    const docRef = doc(db, 'projectData', 'main');
+    if (!this.currentUser) return () => {};
+    
+    const docRef = doc(db, 'users', this.currentUser.uid, 'data', 'projects');
     
     const unsubscribe = onSnapshot(docRef, (doc) => {
       if (doc.exists()) {
         const data = doc.data() as DataSnapshot;
         callback(data.data);
+      } else {
+        callback([]); // 데이터가 없으면 빈 배열
       }
     });
 
     this.dataListeners.push(unsubscribe);
     return unsubscribe;
+  }
+
+  // 팀 전체 데이터 로드 (대시보드용)
+  async loadAllTeamData(): Promise<{ [userId: string]: { profile: any, clients: Client[] } }> {
+    try {
+      const teamData: { [userId: string]: { profile: any, clients: Client[] } } = {};
+      
+      // 모든 사용자 프로필 가져오기
+      const usersRef = collection(db, 'users');
+      const usersSnapshot = await getDocs(usersRef);
+      
+      for (const userDoc of usersSnapshot.docs) {
+        const userId = userDoc.id;
+        const profile = userDoc.data();
+        
+        // 각 사용자의 프로젝트 데이터 가져오기
+        const projectsRef = doc(db, 'users', userId, 'data', 'projects');
+        const projectsSnap = await getDoc(projectsRef);
+        
+        const clients = projectsSnap.exists() ? 
+          (projectsSnap.data() as DataSnapshot).data : [];
+        
+        teamData[userId] = { profile, clients };
+      }
+      
+      return teamData;
+    } catch (error) {
+      console.error('팀 데이터 로드 실패:', error);
+      return {};
+    }
+  }
+
+  // 특정 팀의 데이터만 로드
+  async loadTeamData(teamName: string): Promise<{ [userId: string]: { profile: any, clients: Client[] } }> {
+    try {
+      const teamData: { [userId: string]: { profile: any, clients: Client[] } } = {};
+      
+      // 특정 팀 사용자들만 필터링
+      const usersRef = collection(db, 'users');
+      const usersSnapshot = await getDocs(usersRef);
+      
+      for (const userDoc of usersSnapshot.docs) {
+        const userId = userDoc.id;
+        const profile = userDoc.data();
+        
+        // 같은 팀인 경우만 포함
+        if (profile.team === teamName) {
+          const projectsRef = doc(db, 'users', userId, 'data', 'projects');
+          const projectsSnap = await getDoc(projectsRef);
+          
+          const clients = projectsSnap.exists() ? 
+            (projectsSnap.data() as DataSnapshot).data : [];
+          
+          teamData[userId] = { profile, clients };
+        }
+      }
+      
+      return teamData;
+    } catch (error) {
+      console.error('팀 데이터 로드 실패:', error);
+      return {};
+    }
   }
 
   // 팀 멤버 관리

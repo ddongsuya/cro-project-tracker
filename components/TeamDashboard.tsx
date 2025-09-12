@@ -28,6 +28,7 @@ const TeamDashboard: React.FC<TeamDashboardProps> = ({ clients, currentUser }) =
   const [currentUserTeam, setCurrentUserTeam] = useState<string>('');
   const [teamStats, setTeamStats] = useState<TeamStats | null>(null);
   const [allTeamMembers, setAllTeamMembers] = useState<TeamMember[]>([]);
+  const [teamData, setTeamData] = useState<{ [userId: string]: { profile: any, clients: Client[] } }>({});
   const [loading, setLoading] = useState(true);
 
   const firebaseService = FirebaseService.getInstance();
@@ -45,7 +46,12 @@ const TeamDashboard: React.FC<TeamDashboardProps> = ({ clients, currentUser }) =
       const currentMember = members.find(m => m.email === currentUser?.email);
       if (currentMember) {
         setCurrentUserTeam(currentMember.team);
-        calculateTeamStats(currentMember.team, members);
+        
+        // 팀 전체 데이터 로드
+        const allTeamData = await firebaseService.loadTeamData(currentMember.team);
+        setTeamData(allTeamData);
+        
+        calculateTeamStats(currentMember.team, members, allTeamData);
       }
     } catch (error) {
       console.error('팀 데이터 로드 실패:', error);
@@ -54,12 +60,13 @@ const TeamDashboard: React.FC<TeamDashboardProps> = ({ clients, currentUser }) =
     }
   };
 
-  const calculateTeamStats = (userTeam: string, members: TeamMember[]) => {
+  const calculateTeamStats = (userTeam: string, members: TeamMember[], teamData: { [userId: string]: { profile: any, clients: Client[] } }) => {
     const teamMembers = members.filter(m => m.team === userTeam);
-    const teamMemberEmails = teamMembers.map(m => m.email);
     
-    // 팀원들이 담당하는 프로젝트 찾기 (임시로 모든 프로젝트 포함)
-    const allProjects = clients.flatMap(c => c.requesters.flatMap(r => r.projects));
+    // 팀원들의 모든 프로젝트 취합
+    const allProjects = Object.values(teamData).flatMap(userData => 
+      userData.clients.flatMap(c => c.requesters.flatMap(r => r.projects))
+    );
     
     const completedProjects = allProjects.filter(p => {
       const completedStages = p.stages.filter(s => s.status === '완료').length;

@@ -17,21 +17,15 @@ import MultipleTestForm from './forms/MultipleTestForm';
 import { TestRegistrationInfo, MultipleTestInfo } from '../services/ocrService';
 
 interface ProjectTimelineProps {
-  client: Client;
   project: Project;
-  onSelectProject: (projectId: string) => void;
-  onAddProject: () => void;
   onUpdateProject: (project: Project) => void;
   onAddTest: () => void;
   onEditTest: (test: Test) => void;
   onDeleteTest: (testId: string) => void;
 }
 
-const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ 
-    client, 
+const ProjectTimeline = React.memo<ProjectTimelineProps>(({ 
     project, 
-    onSelectProject, 
-    onAddProject, 
     onUpdateProject,
     onAddTest,
     onEditTest,

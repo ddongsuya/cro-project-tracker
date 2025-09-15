@@ -335,13 +335,13 @@ const TeamDashboard: React.FC<TeamDashboardProps> = ({ clients, currentUser }) =
             type="pie"
             data={[
               {
-                label: '계약 완료',
-                value: teamStats.totalContracted / 10000,
+                label: `계약 완료 (${(teamStats.totalContracted / 100000000).toFixed(1)}억원)`,
+                value: teamStats.totalContracted,
                 color: '#059669'
               },
               {
-                label: '견적 대기',
-                value: (teamStats.totalQuoted - teamStats.totalContracted) / 10000,
+                label: `견적 대기 (${((teamStats.totalQuoted - teamStats.totalContracted) / 100000000).toFixed(1)}억원)`,
+                value: teamStats.totalQuoted - teamStats.totalContracted,
                 color: '#d97706'
               }
             ]}

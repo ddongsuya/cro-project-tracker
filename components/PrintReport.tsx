@@ -30,7 +30,7 @@ const PrintReport: React.FC<PrintReportProps> = ({ clients, selectedClient, sele
       // 헤더
       pdf.setFontSize(20);
       pdf.setTextColor(59, 130, 246); // blue-500
-      pdf.text('CRO Project Tracker', 20, yPosition);
+      pdf.text('Corestemchemon', 20, yPosition);
       
       yPosition += 10;
       pdf.setFontSize(12);

@@ -488,8 +488,8 @@ function App() {
         <div className={`bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl ${isMobile ? 'p-8' : 'p-12'} max-w-md w-full mx-4 border border-white/20`}>
           <div className="text-center mb-8">
             <div className={`${isMobile ? 'text-5xl' : 'text-6xl'} mb-4`}>🧪</div>
-            <h1 className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold text-slate-800 mb-2`}>CRO Project Tracker</h1>
-            <p className="text-slate-600">프로젝트 관리 시스템</p>
+            <h1 className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold text-slate-800 mb-2`}>Corestemchemon</h1>
+            <p className="text-slate-600">CRO Management System</p>
             <p className="text-sm text-slate-500 mt-2">팀원 전용 - 로그인이 필요합니다</p>
           </div>
           
@@ -532,9 +532,9 @@ function App() {
             <div className="relative z-10">
               <h1 className="text-xl font-bold text-white flex items-center gap-2">
                 <span className="text-2xl">🧪</span>
-                CRO Project Tracker
+                Corestemchemon
               </h1>
-              <p className="text-blue-100 text-sm mt-1 font-medium">프로젝트 관리 시스템</p>
+              <p className="text-blue-100 text-sm mt-1 font-medium">CRO Management System</p>
             </div>
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
             <div className="absolute -bottom-2 -left-2 w-16 h-16 bg-white/5 rounded-full blur-lg"></div>

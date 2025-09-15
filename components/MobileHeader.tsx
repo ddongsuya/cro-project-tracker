@@ -37,7 +37,7 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
           <div className="flex items-center gap-2">
             <span className="text-2xl">🧪</span>
             <div className="flex flex-col min-w-0">
-              <h1 className="text-lg font-bold text-slate-800 truncate">CRO Tracker</h1>
+              <h1 className="text-lg font-bold text-slate-800 truncate">Corestemchemon</h1>
               {selectedClient && (
                 <button
                   onClick={onToggleClientList}

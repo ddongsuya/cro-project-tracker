@@ -1,4 +1,9 @@
-// Fix: Defining types for the application
+// Enhanced type definitions for the application
+export type ViewMode = 'dashboard' | 'team-dashboard' | 'company-dashboard' | 'calendar' | 'projects';
+
+export type ProjectStatus = 'pending' | 'in-progress' | 'completed' | 'cancelled';
+export type TestStatus = 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
+
 export enum StageStatus {
   Pending = '대기',
   InProgress = '진행중',

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import type { Client } from '../types';
 import ChartBarIcon from './icons/ChartBarIcon';
 import CurrencyDollarIcon from './icons/CurrencyDollarIcon';
@@ -9,7 +9,7 @@ interface DashboardProps {
   clients: Client[];
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ clients }) => {
+const Dashboard = React.memo<DashboardProps>(({ clients }) => {
   
   const calculateDashboardData = () => {
     const allProjects = clients.flatMap(c => c.requesters.flatMap(r => r.projects));
@@ -105,95 +105,113 @@ const Dashboard: React.FC<DashboardProps> = ({ clients }) => {
     };
   };
 
-  const data = calculateDashboardData();
+  const data = useMemo(() => calculateDashboardData(), [clients]);
 
   return (
-    <div className="space-y-4">
-      {/* 1. 핵심 KPI 카드 (상단 한 줄) */}
-      <div className="flex gap-3 flex-wrap">
-        <div className="bg-blue-500 text-white p-3 rounded-lg flex items-center gap-2 min-w-[140px]">
-          <ClipboardDocumentListIcon className="h-5 w-5" />
+    <div className="space-y-3">
+      {/* 1. 핵심 KPI 카드 (6개 한 줄 배치) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+        <div className="bg-blue-500 text-white p-2 rounded-lg flex items-center gap-2 min-w-[120px] min-h-[44px] touch-manipulation">
+          <ClipboardDocumentListIcon className="h-4 w-4" />
           <div>
             <div className="text-xs opacity-90">활성 프로젝트</div>
-            <div className="text-xl font-bold">{data.activeProjects}개</div>
+            <div className="text-lg font-bold">{data.activeProjects}개</div>
           </div>
         </div>
 
-        <div className="bg-green-500 text-white p-3 rounded-lg flex items-center gap-2 min-w-[140px]">
-          <CurrencyDollarIcon className="h-5 w-5" />
+        <div className="bg-green-500 text-white p-2 rounded-lg flex items-center gap-2 min-w-[120px] min-h-[44px] touch-manipulation">
+          <CurrencyDollarIcon className="h-4 w-4" />
           <div>
             <div className="text-xs opacity-90">이달 매출</div>
-            <div className="text-xl font-bold">{(data.thisMonthRevenue / 100000000).toFixed(1)}억</div>
+            <div className="text-lg font-bold">{(data.thisMonthRevenue / 100000000).toFixed(1)}억</div>
           </div>
         </div>
 
-        <div className="bg-purple-500 text-white p-3 rounded-lg flex items-center gap-2 min-w-[120px]">
-          <ChartBarIcon className="h-5 w-5" />
+        <div className="bg-purple-500 text-white p-2 rounded-lg flex items-center gap-2 min-w-[120px] min-h-[44px] touch-manipulation">
+          <ChartBarIcon className="h-4 w-4" />
           <div>
             <div className="text-xs opacity-90">전환율</div>
-            <div className="text-xl font-bold">{data.conversionRate.toFixed(0)}%</div>
+            <div className="text-lg font-bold">{data.conversionRate.toFixed(0)}%</div>
           </div>
         </div>
 
-        <div className="bg-red-500 text-white p-3 rounded-lg flex items-center gap-2 min-w-[120px]">
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-red-500 text-white p-2 rounded-lg flex items-center gap-2 min-w-[120px] min-h-[44px] touch-manipulation">
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <div>
             <div className="text-xs opacity-90">마감임박</div>
-            <div className="text-xl font-bold">{data.urgentProjects}개</div>
+            <div className="text-lg font-bold">{data.urgentProjects}개</div>
+          </div>
+        </div>
+
+        <div className="bg-orange-500 text-white p-2 rounded-lg flex items-center gap-2 min-w-[120px] min-h-[44px] touch-manipulation">
+          <UserGroupIcon className="h-4 w-4" />
+          <div>
+            <div className="text-xs opacity-90">총 고객사</div>
+            <div className="text-lg font-bold">{data.completedClients.length}개</div>
+          </div>
+        </div>
+
+        <div className="bg-indigo-500 text-white p-2 rounded-lg flex items-center gap-2 min-w-[120px] min-h-[44px] touch-manipulation">
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          <div>
+            <div className="text-xs opacity-90">목표달성</div>
+            <div className="text-lg font-bold">85%</div>
           </div>
         </div>
       </div>
 
-      {/* 2x2 그리드 레이아웃 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* 3열 그리드 레이아웃 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         
         {/* 2. 프로젝트 진행 현황 */}
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
-          <h3 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
-            <ClipboardDocumentListIcon className="h-4 w-4 text-indigo-600" />
+        <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-200 h-48">
+          <h3 className="text-xs font-semibold text-slate-800 mb-2 flex items-center gap-2">
+            <ClipboardDocumentListIcon className="h-3 w-3 text-indigo-600" />
             진행단계별 현황
           </h3>
           
-          <div className="space-y-3">
+          <div className="space-y-2 overflow-y-auto h-40">
             {data.stageStats.map((stage, index) => (
               <div key={stage.name} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-slate-600 w-20">{stage.name}</span>
+                  <span className="text-xs text-slate-600 w-16">{stage.name}</span>
                   <div className="flex gap-1">
-                    {Array.from({ length: Math.min(stage.count, 10) }).map((_, i) => (
-                      <div key={i} className={`w-2 h-2 rounded-full ${stage.color}`}></div>
+                    {Array.from({ length: Math.min(stage.count, 8) }).map((_, i) => (
+                      <div key={i} className={`w-1.5 h-1.5 rounded-full ${stage.color}`}></div>
                     ))}
-                    {stage.count > 10 && (
-                      <span className="text-xs text-slate-500 ml-1">+{stage.count - 10}</span>
+                    {stage.count > 8 && (
+                      <span className="text-xs text-slate-500 ml-1">+{stage.count - 8}</span>
                     )}
                   </div>
                 </div>
-                <span className="text-sm font-semibold text-slate-700">({stage.count})</span>
+                <span className="text-xs font-semibold text-slate-700">({stage.count})</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* 3. 우선순위 알림 */}
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
-          <h3 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
-            <svg className="h-4 w-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-200 h-48">
+          <h3 className="text-xs font-semibold text-slate-800 mb-2 flex items-center gap-2">
+            <svg className="h-3 w-3 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4 19h6v-2H4v2zM4 15h8v-2H4v2zM4 11h10V9H4v2z" />
             </svg>
             우선순위 알림
           </h3>
           
-          <div className="space-y-2">
+          <div className="space-y-2 overflow-y-auto h-40">
             {data.priorityAlerts.map((alert, index) => (
-              <div key={index} className={`p-2 rounded-md ${alert.color} border`}>
+              <div key={index} className={`p-2 rounded-md ${alert.color} border min-h-[44px] touch-manipulation`}>
                 <div className="flex items-center gap-2">
                   {alert.level === 'urgent' && <span className="text-red-600">🔴</span>}
                   {alert.level === 'warning' && <span className="text-yellow-600">🟡</span>}
                   {alert.level === 'completed' && <span className="text-green-600">🟢</span>}
                   <div className="flex-1">
-                    <div className="text-sm font-medium">{alert.message}</div>
+                    <div className="text-xs font-medium">{alert.message}</div>
                     <div className="text-xs opacity-75">({alert.client})</div>
                   </div>
                 </div>
@@ -203,24 +221,24 @@ const Dashboard: React.FC<DashboardProps> = ({ clients }) => {
         </div>
 
         {/* 4. 매출 트렌드 */}
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
-          <h3 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
-            <ChartBarIcon className="h-4 w-4 text-blue-600" />
-            매출 트렌드 (최근 6개월)
+        <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-200 h-48">
+          <h3 className="text-xs font-semibold text-slate-800 mb-2 flex items-center gap-2">
+            <ChartBarIcon className="h-3 w-3 text-blue-600" />
+            매출 트렌드 (6개월)
           </h3>
           
-          <div className="space-y-2">
+          <div className="space-y-1 overflow-y-auto h-32">
             {data.revenueTrend.map((item, index) => (
               <div key={index} className="flex items-center justify-between">
-                <span className="text-sm text-slate-600">{item.month}</span>
+                <span className="text-xs text-slate-600">{item.month}</span>
                 <div className="flex items-center gap-2">
-                  <div className="w-20 bg-slate-200 rounded-full h-2">
+                  <div className="w-16 bg-slate-200 rounded-full h-1.5">
                     <div 
-                      className="bg-blue-500 h-2 rounded-full transition-all duration-500"
+                      className="bg-blue-500 h-1.5 rounded-full transition-all duration-500"
                       style={{ width: `${(item.revenue / 250000000) * 100}%` }}
                     ></div>
                   </div>
-                  <span className="text-sm font-semibold text-slate-700 w-12 text-right">
+                  <span className="text-xs font-semibold text-slate-700 w-10 text-right">
                     {(item.revenue / 100000000).toFixed(1)}억
                   </span>
                 </div>
@@ -228,8 +246,8 @@ const Dashboard: React.FC<DashboardProps> = ({ clients }) => {
             ))}
           </div>
           
-          <div className="mt-3 pt-3 border-t border-slate-200">
-            <div className="flex items-center justify-between text-sm">
+          <div className="mt-2 pt-2 border-t border-slate-200">
+            <div className="flex items-center justify-between text-xs">
               <span className="text-slate-600">평균 월매출</span>
               <span className="font-semibold text-slate-800">
                 {(data.revenueTrend.reduce((sum, item) => sum + item.revenue, 0) / data.revenueTrend.length / 100000000).toFixed(1)}억
@@ -239,40 +257,40 @@ const Dashboard: React.FC<DashboardProps> = ({ clients }) => {
         </div>
 
         {/* 5. 팀 성과 + 계약완료 고객사 */}
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
-          <h3 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
-            <UserGroupIcon className="h-4 w-4 text-green-600" />
+        <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-200 h-48">
+          <h3 className="text-xs font-semibold text-slate-800 mb-2 flex items-center gap-2">
+            <UserGroupIcon className="h-3 w-3 text-green-600" />
             팀 성과 요약
           </h3>
           
           {/* 팀 성과 */}
-          <div className="space-y-2 mb-4">
+          <div className="space-y-1 mb-3">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-slate-600">내 담당</span>
-              <span className="text-sm font-semibold text-slate-800">{data.activeProjects}개 프로젝트</span>
+              <span className="text-xs text-slate-600">내 담당</span>
+              <span className="text-xs font-semibold text-slate-800">{data.activeProjects}개</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-slate-600">팀 전체</span>
-              <span className="text-sm font-semibold text-slate-800">{data.teamProjects}개 프로젝트</span>
+              <span className="text-xs text-slate-600">팀 전체</span>
+              <span className="text-xs font-semibold text-slate-800">{data.teamProjects}개</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-slate-600">이달 목표 달성률</span>
-              <span className="text-sm font-semibold text-green-600">85%</span>
+              <span className="text-xs text-slate-600">목표 달성률</span>
+              <span className="text-xs font-semibold text-green-600">85%</span>
             </div>
           </div>
 
           {/* 계약완료 고객사 */}
-          <div className="pt-3 border-t border-slate-200">
+          <div className="pt-2 border-t border-slate-200">
             <div className="text-xs text-slate-600 mb-2">계약 완료 고객사</div>
-            <div className="flex flex-wrap gap-1">
-              {data.completedClients.slice(0, 6).map((client) => (
-                <span key={client.id} className="px-2 py-1 bg-green-50 text-green-700 text-xs rounded border border-green-200">
-                  {client.name.length > 6 ? client.name.substring(0, 6) + '..' : client.name}
+            <div className="flex flex-wrap gap-1 overflow-y-auto h-20">
+              {data.completedClients.slice(0, 8).map((client) => (
+                <span key={client.id} className="px-1.5 py-0.5 bg-green-50 text-green-700 text-xs rounded border border-green-200 min-h-[20px] touch-manipulation">
+                  {client.name.length > 5 ? client.name.substring(0, 5) + '..' : client.name}
                 </span>
               ))}
-              {data.completedClients.length > 6 && (
-                <span className="px-2 py-1 bg-slate-50 text-slate-600 text-xs rounded border border-slate-200">
-                  +{data.completedClients.length - 6}개
+              {data.completedClients.length > 8 && (
+                <span className="px-1.5 py-0.5 bg-slate-50 text-slate-600 text-xs rounded border border-slate-200 min-h-[20px]">
+                  +{data.completedClients.length - 8}
                 </span>
               )}
             </div>
@@ -281,6 +299,8 @@ const Dashboard: React.FC<DashboardProps> = ({ clients }) => {
       </div>
     </div>
   );
-};
+});
+
+Dashboard.displayName = 'Dashboard';
 
 export default Dashboard;

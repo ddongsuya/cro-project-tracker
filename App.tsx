@@ -29,6 +29,8 @@ import { useIsMobile } from './hooks/useMediaQuery';
 import MobileBottomNav from './components/MobileBottomNav';
 import MobileHeader from './components/MobileHeader';
 import MobileClientDrawer from './components/MobileClientDrawer';
+import Sidebar from './components/Sidebar';
+import ProjectFilter from './components/ProjectFilter';
 
 type ModalState = 
   | { type: 'NONE' }
@@ -55,6 +57,8 @@ function App() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isFirebaseMode, setIsFirebaseMode] = useState(false);
   const [showMobileClientDrawer, setShowMobileClientDrawer] = useState(false);
+  const [selectedMenu, setSelectedMenu] = useState('my-projects');
+  const [selectedSubmenu, setSelectedSubmenu] = useState('all');
   
   const forceUpdate = useForceUpdate();
   const firebaseService = FirebaseService.getInstance();
@@ -525,32 +529,27 @@ function App() {
     <div className={`${isMobile ? 'flex flex-col' : 'flex'} h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 font-sans`}>
       {/* 데스크톱 사이드바 */}
       {!isMobile && (
-        <div className="w-80 bg-white/95 backdrop-blur-sm shadow-2xl border-r border-slate-200/60 flex flex-col">
-          {/* 로고/헤더 */}
-          <div className="p-6 border-b border-slate-200/60 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-purple-600/90"></div>
-            <div className="relative z-10">
-              <h1 className="text-xl font-bold text-white flex items-center gap-2">
-                <span className="text-2xl">🧪</span>
-                Corestemchemon
-              </h1>
-              <p className="text-blue-100 text-sm mt-1 font-medium">CRO Management System</p>
-            </div>
-            <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
-            <div className="absolute -bottom-2 -left-2 w-16 h-16 bg-white/5 rounded-full blur-lg"></div>
-          </div>
-          
-          {/* 클라이언트 목록 */}
-          <div className="flex-1 overflow-hidden">
-            <ClientList
-              clients={filteredClients}
-              selectedClientId={selectedClientId}
-              onSelectClient={handleSelectClient}
-              onAddClient={() => setModalState({ type: 'ADD_CLIENT' })}
-              onDeleteClient={handleDeleteClient}
-            />
-          </div>
-        </div>
+        <Sidebar
+          clients={filteredClients}
+          currentUser={currentUser}
+          onMenuSelect={(menu, submenu) => {
+            setSelectedMenu(menu);
+            setSelectedSubmenu(submenu || '');
+            
+            // 메뉴에 따른 뷰 모드 변경
+            if (menu === 'dashboard') {
+              if (submenu === 'personal') setViewMode('dashboard');
+              else if (submenu === 'team') setViewMode('team-dashboard');
+              else if (submenu === 'company') setViewMode('company-dashboard');
+            } else if (menu === 'schedule') {
+              setViewMode('calendar');
+            } else if (menu === 'clients' || menu === 'my-projects') {
+              setViewMode('projects');
+            }
+          }}
+          selectedMenu={selectedMenu}
+          selectedSubmenu={selectedSubmenu}
+        />
       )}
 
       {/* 모바일 클라이언트 드로어 */}
@@ -741,14 +740,107 @@ function App() {
             />
           ) : (
             <div className="space-y-6">
-              {!isMobile && (
-                <SearchAndFilter 
-                  clients={clients} 
-                  onFilteredResults={handleFilteredResults}
+              {/* 메뉴별 콘텐츠 */}
+              {selectedMenu === 'my-projects' ? (
+                <ProjectFilter
+                  clients={filteredClients}
+                  filterType={selectedSubmenu || 'all'}
+                  onSelectProject={handleSelectProject}
+                  onAddProject={() => setModalState({ type: 'ADD_PROJECT' })}
+                  onEditProject={(project, requesterId) => setModalState({ type: 'EDIT_PROJECT', project, requesterId })}
+                  onDeleteProject={handleDeleteProject}
                 />
+              ) : selectedMenu === 'clients' ? (
+                selectedSubmenu === 'add' ? (
+                  <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-100">
+                    <h2 className="text-2xl font-bold text-slate-800 mb-6">새 고객사 등록</h2>
+                    <ClientForm onSave={handleAddClient} onCancel={() => setSelectedSubmenu('all')} />
+                  </div>
+                ) : selectedSubmenu === 'search' ? (
+                  <div className="space-y-6">
+                    <SearchAndFilter 
+                      clients={clients} 
+                      onFilteredResults={handleFilteredResults}
+                    />
+                    <ProjectFilter
+                      clients={filteredClients}
+                      filterType="all"
+                      onSelectProject={handleSelectProject}
+                      onAddProject={() => setModalState({ type: 'ADD_PROJECT' })}
+                      onEditProject={(project, requesterId) => setModalState({ type: 'EDIT_PROJECT', project, requesterId })}
+                      onDeleteProject={handleDeleteProject}
+                    />
+                  </div>
+                ) : (
+                  <ProjectFilter
+                    clients={filteredClients}
+                    filterType="all"
+                    onSelectProject={handleSelectProject}
+                    onAddProject={() => setModalState({ type: 'ADD_PROJECT' })}
+                    onEditProject={(project, requesterId) => setModalState({ type: 'EDIT_PROJECT', project, requesterId })}
+                    onDeleteProject={handleDeleteProject}
+                  />
+                )
+              ) : selectedMenu === 'analytics' ? (
+                selectedSubmenu === 'export' ? (
+                  <div className="text-center py-20">
+                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-12 max-w-md mx-auto border border-slate-200/60">
+                      <div className="text-6xl mb-6">🖨️</div>
+                      <h2 className="text-2xl font-bold text-gray-700 mb-3">PDF 리포트 출력</h2>
+                      <p className="text-gray-500 leading-relaxed mb-6">프로젝트 데이터를 PDF로 출력할 수 있습니다.</p>
+                      <button
+                        onClick={() => setModalState({ type: 'PRINT_REPORT' })}
+                        className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 font-medium"
+                      >
+                        리포트 생성
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-20">
+                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-12 max-w-md mx-auto border border-slate-200/60">
+                      <div className="text-6xl mb-6">📊</div>
+                      <h2 className="text-2xl font-bold text-gray-700 mb-3">분석 기능 준비중</h2>
+                      <p className="text-gray-500 leading-relaxed">고급 분석 기능이 곧 추가될 예정입니다.</p>
+                    </div>
+                  </div>
+                )
+              ) : selectedMenu === 'settings' ? (
+                selectedSubmenu === 'data' ? (
+                  <div className="text-center py-20">
+                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-12 max-w-md mx-auto border border-slate-200/60">
+                      <div className="text-6xl mb-6">💾</div>
+                      <h2 className="text-2xl font-bold text-gray-700 mb-3">데이터 관리</h2>
+                      <p className="text-gray-500 leading-relaxed mb-6">데이터를 가져오거나 내보낼 수 있습니다.</p>
+                      <button
+                        onClick={() => setModalState({ type: 'DATA_MANAGEMENT' })}
+                        className="px-6 py-3 bg-gradient-to-r from-slate-600 to-slate-700 text-white rounded-xl hover:from-slate-700 hover:to-slate-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 font-medium"
+                      >
+                        데이터 관리
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-20">
+                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-12 max-w-md mx-auto border border-slate-200/60">
+                      <div className="text-6xl mb-6">⚙️</div>
+                      <h2 className="text-2xl font-bold text-gray-700 mb-3">설정 기능 준비중</h2>
+                      <p className="text-gray-500 leading-relaxed">설정 기능이 곧 추가될 예정입니다.</p>
+                    </div>
+                  </div>
+                )
+              ) : (
+                <div className="text-center py-20">
+                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-12 max-w-md mx-auto border border-slate-200/60">
+                    <div className="text-6xl mb-6">🏢</div>
+                    <h2 className="text-2xl font-bold text-gray-700 mb-3">메뉴를 선택해주세요</h2>
+                    <p className="text-gray-500 leading-relaxed">왼쪽 메뉴에서 원하는 기능을 선택하세요.</p>
+                  </div>
+                </div>
               )}
-              
-              {selectedClient && selectedProject ? (
+
+              {/* 프로젝트 상세 보기 */}
+              {selectedClient && selectedProject && (
                 <div className="space-y-8">
                   <ProjectTimeline
                     client={selectedClient}
@@ -761,30 +853,6 @@ function App() {
                     onDeleteTest={handleDeleteTest}
                   />
                   <AIInsights project={selectedProject} client={selectedClient} />
-                </div>
-              ) : selectedClient ? (
-                <ProjectList
-                  client={selectedClient}
-                  onSelectProject={handleSelectProject}
-                  onAddProject={() => setModalState({ type: 'ADD_PROJECT' })}
-                  onAddRequester={() => setModalState({ type: 'ADD_REQUESTER' })}
-                  onEditProject={(project, requesterId) => setModalState({ type: 'EDIT_PROJECT', project, requesterId })}
-                  onDeleteRequester={handleDeleteRequester}
-                  onDeleteProject={handleDeleteProject}
-                />
-              ) : (
-                 <div className="text-center py-20">
-                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-12 max-w-md mx-auto border border-slate-200/60">
-                    <div className="text-6xl mb-6">🏢</div>
-                    <h2 className="text-2xl font-bold text-gray-700 mb-3">고객사를 선택해주세요</h2>
-                    <p className="text-gray-500 leading-relaxed">왼쪽 목록에서 고객사를 선택하거나 새 고객사를 추가하세요.</p>
-                    <button
-                      onClick={() => setModalState({ type: 'ADD_CLIENT' })}
-                      className="mt-6 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 font-medium"
-                    >
-                      + 새 고객사 추가
-                    </button>
-                  </div>
                 </div>
               )}
             </div>

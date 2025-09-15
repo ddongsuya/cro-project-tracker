@@ -209,59 +209,66 @@ const TeamDashboard: React.FC<TeamDashboardProps> = ({ clients, currentUser }) =
   }
 
   return (
-    <div className="space-y-8">
-      {/* 팀 헤더 */}
-      <div className="flex items-center gap-4 mb-8">
-        <div className={`p-4 bg-gradient-to-r ${getTeamColor(currentUserTeam)} rounded-2xl`}>
-          <UserGroupIcon className="h-8 w-8 text-white" />
+    <div className="space-y-4">
+      {/* 컴팩트한 팀 헤더 */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className={`p-2 bg-gradient-to-r ${getTeamColor(currentUserTeam)} rounded-lg`}>
+          <UserGroupIcon className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h2 className="text-3xl font-bold text-slate-800">{teamStats.teamName} 대시보드</h2>
-          <p className="text-slate-600 mt-1">{teamStats.memberCount}명의 팀원이 함께 하고 있습니다</p>
+          <h2 className="text-xl font-bold text-slate-800">{teamStats.teamName} 대시보드</h2>
+          <p className="text-slate-500 text-sm">{teamStats.memberCount}명의 팀원</p>
         </div>
       </div>
 
-      {/* 팀 성과 지표 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="팀 프로젝트"
-          value={teamStats.totalProjects}
-          icon={<ClipboardDocumentListIcon className="h-7 w-7 text-white" />}
-          color="bg-gradient-to-br from-blue-500 to-blue-600"
-          subtitle={`완료: ${teamStats.completedProjects}개`}
-        />
+      {/* 초컴팩트 팀 성과 지표 */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-3 rounded-lg text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-blue-100 text-xs">팀 프로젝트</p>
+              <p className="text-xl font-bold">{teamStats.totalProjects}</p>
+            </div>
+            <ClipboardDocumentListIcon className="h-6 w-6 text-blue-200" />
+          </div>
+        </div>
         
-        <StatCard
-          title="팀 견적금액"
-          value={`${(teamStats.totalQuoted / 100000000).toFixed(1)}억원`}
-          icon={<CurrencyDollarIcon className="h-7 w-7 text-white" />}
-          color="bg-gradient-to-br from-emerald-500 to-emerald-600"
-        />
+        <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-3 rounded-lg text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-emerald-100 text-xs">팀 견적금액</p>
+              <p className="text-xl font-bold">{(teamStats.totalQuoted / 100000000).toFixed(1)}억</p>
+            </div>
+            <CurrencyDollarIcon className="h-6 w-6 text-emerald-200" />
+          </div>
+        </div>
         
-        <StatCard
-          title="계약 전환율"
-          value={`${teamStats.contractRate.toFixed(1)}%`}
-          icon={<ChartBarIcon className="h-7 w-7 text-white" />}
-          color="bg-gradient-to-br from-amber-500 to-orange-500"
-          subtitle={`${(teamStats.totalContracted / 100000000).toFixed(1)}억원 계약`}
-        />
+        <div className="bg-gradient-to-br from-amber-500 to-orange-500 p-3 rounded-lg text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-amber-100 text-xs">계약 전환율</p>
+              <p className="text-xl font-bold">{teamStats.contractRate.toFixed(1)}%</p>
+            </div>
+            <ChartBarIcon className="h-6 w-6 text-amber-200" />
+          </div>
+        </div>
         
-        <StatCard
-          title="팀원 수"
-          value={teamStats.memberCount}
-          icon={<UserGroupIcon className="h-7 w-7 text-white" />}
-          color="bg-gradient-to-br from-purple-500 to-indigo-500"
-          subtitle="활성 멤버"
-        />
+        <div className="bg-gradient-to-br from-purple-500 to-indigo-500 p-3 rounded-lg text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-purple-100 text-xs">팀원 수</p>
+              <p className="text-xl font-bold">{teamStats.memberCount}</p>
+            </div>
+            <UserGroupIcon className="h-6 w-6 text-purple-200" />
+          </div>
+        </div>
       </div>
 
-      {/* 팀원 현황 */}
-      <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-100">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <UserGroupIcon className="h-5 w-5 text-blue-600" />
-          </div>
-          <h3 className="text-xl font-semibold text-slate-800">{teamStats.teamName} 멤버</h3>
+      {/* 초컴팩트 팀원 현황 */}
+      <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-100">
+        <div className="flex items-center gap-2 mb-3">
+          <UserGroupIcon className="h-4 w-4 text-blue-600" />
+          <h3 className="text-base font-semibold text-slate-800">{teamStats.teamName} 멤버</h3>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

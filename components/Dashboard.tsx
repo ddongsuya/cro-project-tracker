@@ -185,65 +185,73 @@ const Dashboard: React.FC<DashboardProps> = ({ clients }) => {
   );
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl">
-          <ChartBarIcon className="h-8 w-8 text-white" />
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg">
+          <ChartBarIcon className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h2 className="text-3xl font-bold text-slate-800">대시보드</h2>
-          <p className="text-slate-600 mt-1">프로젝트 현황을 한눈에 확인하세요</p>
+          <h2 className="text-xl font-bold text-slate-800">내 대시보드</h2>
+          <p className="text-slate-500 text-sm">프로젝트 현황 요약</p>
         </div>
       </div>
 
-      {/* 주요 지표 카드들 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="총 고객사"
-          value={stats.totalClients}
-          icon={<UserGroupIcon className="h-7 w-7 text-white" />}
-          color="bg-gradient-to-br from-blue-500 to-blue-600"
-        />
-        
-        <StatCard
-          title="총 프로젝트"
-          value={stats.totalProjects}
-          icon={<ClipboardDocumentListIcon className="h-7 w-7 text-white" />}
-          color="bg-gradient-to-br from-emerald-500 to-emerald-600"
-        />
-        
-        <StatCard
-          title="총 견적금액"
-          value={`${(stats.totalQuoted / 100000000).toFixed(1)}억원`}
-          icon={<CurrencyDollarIcon className="h-7 w-7 text-white" />}
-          color="bg-gradient-to-br from-amber-500 to-orange-500"
-          subtitle={`평균 ${(stats.avgProjectValue / 10000).toFixed(0)}만원/건`}
-        />
-        
-        <StatCard
-          title="계약 전환율"
-          value={`${stats.contractRate.toFixed(1)}%`}
-          icon={<ChartBarIcon className="h-7 w-7 text-white" />}
-          color="bg-gradient-to-br from-purple-500 to-indigo-500"
-          subtitle={`${(stats.totalContracted / 100000000).toFixed(1)}억원 계약`}
-        />
-      </div>
-
-      {/* 업무 진행 단계별 완료 현황 */}
-      <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-100">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-indigo-100 rounded-lg">
-            <ClipboardDocumentListIcon className="h-5 w-5 text-indigo-600" />
+      {/* 초컴팩트 통계 카드 */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-3 rounded-lg text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-blue-100 text-xs">총 고객사</p>
+              <p className="text-xl font-bold">{stats.totalClients}</p>
+            </div>
+            <UserGroupIcon className="h-6 w-6 text-blue-200" />
           </div>
-          <h3 className="text-xl font-semibold text-slate-800">업무 진행 단계별 완료 현황</h3>
-          <p className="text-sm text-slate-500 ml-auto">전체 프로젝트 기준</p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-3 rounded-lg text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-emerald-100 text-xs">총 프로젝트</p>
+              <p className="text-xl font-bold">{stats.totalProjects}</p>
+            </div>
+            <ClipboardDocumentListIcon className="h-6 w-6 text-emerald-200" />
+          </div>
+        </div>
+        
+        <div className="bg-gradient-to-br from-amber-500 to-orange-500 p-3 rounded-lg text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-amber-100 text-xs">총 견적금액</p>
+              <p className="text-xl font-bold">{(stats.totalQuoted / 100000000).toFixed(1)}억</p>
+            </div>
+            <CurrencyDollarIcon className="h-6 w-6 text-amber-200" />
+          </div>
+        </div>
+        
+        <div className="bg-gradient-to-br from-purple-500 to-indigo-500 p-3 rounded-lg text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-purple-100 text-xs">계약 전환율</p>
+              <p className="text-xl font-bold">{stats.contractRate.toFixed(1)}%</p>
+            </div>
+            <ChartBarIcon className="h-6 w-6 text-purple-200" />
+          </div>
+        </div>
+      </div>
+
+      {/* 초컴팩트 단계별 현황 */}
+      <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-100">
+        <div className="flex items-center gap-2 mb-3">
+          <ClipboardDocumentListIcon className="h-4 w-4 text-indigo-600" />
+          <h3 className="text-base font-semibold text-slate-800">업무 진행 현황</h3>
+          <span className="text-xs text-slate-500 ml-auto">{stats.totalProjects}개 프로젝트</span>
+        </div>
+        
+        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
           {stats.stageStats.map((stage, index) => (
-            <div key={stage.stageName} className="p-4 border border-slate-200 rounded-xl hover:shadow-md transition-all duration-200 bg-gradient-to-br from-white to-slate-50">
-              <div className="flex items-center justify-between mb-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${
+            <div key={stage.stageName} className="p-2 border border-slate-200 rounded-md hover:shadow-sm transition-all duration-200 bg-slate-50">
+              <div className="flex items-center justify-between mb-1">
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold ${
                   index === 0 ? 'bg-blue-500' : 
                   index === 1 ? 'bg-indigo-500' : 
                   index === 2 ? 'bg-purple-500' : 
@@ -253,49 +261,23 @@ const Dashboard: React.FC<DashboardProps> = ({ clients }) => {
                 }`}>
                   {index + 1}
                 </div>
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-slate-500 font-medium">
                   {stage.completionRate.toFixed(0)}%
                 </span>
               </div>
               
-              <h4 className="font-medium text-slate-800 text-sm mb-2 leading-tight">
+              <h4 className="font-medium text-slate-800 text-xs mb-1 leading-tight">
                 {stage.stageName}
               </h4>
               
-              <div className="space-y-1 mb-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-600">완료</span>
-                  <span className="text-sm font-semibold text-green-600">
-                    {stage.completedCount}건
-                  </span>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-600">진행중</span>
-                  <span className="text-sm font-semibold text-blue-600">
-                    {stage.inProgressCount}건
-                  </span>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-600">대기</span>
-                  <span className="text-sm font-semibold text-amber-600">
-                    {stage.pendingCount}건
-                  </span>
-                </div>
-                
-                <div className="flex items-center justify-between pt-1 border-t border-slate-200">
-                  <span className="text-xs text-slate-600 font-medium">전체</span>
-                  <span className="text-sm font-semibold text-slate-800">
-                    {stage.totalCount}건
-                  </span>
-                </div>
+              <div className="text-center">
+                <div className="text-xs font-semibold text-slate-700">{stage.completedCount}/{stage.totalCount}</div>
               </div>
               
-              {/* 진행률 바 */}
-              <div className="w-full bg-slate-200 rounded-full h-2">
+              {/* 초컴팩트 진행률 바 */}
+              <div className="w-full bg-slate-200 rounded-full h-1 mt-1">
                 <div 
-                  className={`h-2 rounded-full transition-all duration-500 ${
+                  className={`h-1 rounded-full transition-all duration-500 ${
                     index === 0 ? 'bg-blue-500' : 
                     index === 1 ? 'bg-indigo-500' : 
                     index === 2 ? 'bg-purple-500' : 
@@ -310,75 +292,36 @@ const Dashboard: React.FC<DashboardProps> = ({ clients }) => {
           ))}
         </div>
         
-        {/* 요약 정보 */}
-        <div className="mt-6 pt-6 border-t border-slate-200">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">
-                {stats.stageStats[0]?.completedCount || 0}
-              </div>
-              <div className="text-sm text-slate-600">문의 접수</div>
+        {/* 핵심 지표 요약 */}
+        <div className="mt-3 pt-3 border-t border-slate-200">
+          <div className="grid grid-cols-4 gap-2">
+            <div className="text-center p-2 bg-blue-50 rounded-md">
+              <div className="text-base font-bold text-blue-600">{stats.stageStats[0]?.completedCount || 0}</div>
+              <div className="text-xs text-slate-600">문의접수</div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">
-                {stats.stageStats[2]?.completedCount || 0}
-              </div>
-              <div className="text-sm text-slate-600">견적 송부</div>
+            <div className="text-center p-2 bg-purple-50 rounded-md">
+              <div className="text-base font-bold text-purple-600">{stats.stageStats[2]?.completedCount || 0}</div>
+              <div className="text-xs text-slate-600">견적송부</div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">
-                {stats.stageStats[4]?.completedCount || 0}
-              </div>
-              <div className="text-sm text-slate-600">계약 체결</div>
+            <div className="text-center p-2 bg-red-50 rounded-md">
+              <div className="text-base font-bold text-red-600">{stats.stageStats[4]?.completedCount || 0}</div>
+              <div className="text-xs text-slate-600">계약체결</div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {stats.stageStats[6]?.completedCount || 0}
-              </div>
-              <div className="text-sm text-slate-600">최종보고서 발행</div>
+            <div className="text-center p-2 bg-green-50 rounded-md">
+              <div className="text-base font-bold text-green-600">{stats.stageStats[6]?.completedCount || 0}</div>
+              <div className="text-xs text-slate-600">최종완료</div>
             </div>
           </div>
-        </div>
-        
-        {/* 현재 진행 중인 단계별 분포 */}
-        <div className="mt-8 pt-6 border-t border-slate-200">
-          <h4 className="text-lg font-semibold text-slate-800 mb-4">현재 진행 중인 단계별 프로젝트 분포</h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-            {stats.currentStageDistribution.map((stage, index) => (
-              <div key={stage.stageName} className="text-center p-3 bg-slate-50 rounded-lg border">
-                <div className={`text-xl font-bold mb-1 ${
-                  index === 0 ? 'text-blue-600' : 
-                  index === 1 ? 'text-indigo-600' : 
-                  index === 2 ? 'text-purple-600' : 
-                  index === 3 ? 'text-pink-600' :
-                  index === 4 ? 'text-red-600' :
-                  index === 5 ? 'text-orange-600' : 'text-green-600'
-                }`}>
-                  {stage.projectCount}
-                </div>
-                <div className="text-xs text-slate-600 leading-tight">
-                  {stage.stageName.split(' ').map((word, i) => (
-                    <div key={i}>{word}</div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="text-xs text-slate-500 mt-3 text-center">
-            * 각 프로젝트에서 현재 진행 중인 단계 (완료되지 않은 첫 번째 단계) 기준
-          </p>
         </div>
       </div>
 
-      {/* 차트 섹션 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* 초컴팩트 차트 섹션 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {/* 월별 매출 트렌드 */}
-        <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-100">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <ChartBarIcon className="h-5 w-5 text-blue-600" />
-            </div>
-            <h3 className="text-xl font-semibold text-slate-800">월별 매출 트렌드</h3>
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-100">
+          <div className="flex items-center gap-2 mb-3">
+            <ChartBarIcon className="h-4 w-4 text-blue-600" />
+            <h3 className="text-sm font-semibold text-slate-800">월별 매출 트렌드</h3>
           </div>
           <SimpleChart
             type="line"
@@ -387,17 +330,15 @@ const Dashboard: React.FC<DashboardProps> = ({ clients }) => {
               value: month.contracted / 10000, // 만원 단위
               color: `hsl(${220 + index * 20}, 70%, 50%)`
             }))}
-            height={180}
+            height={100}
           />
         </div>
 
         {/* 프로젝트 상태 분포 */}
-        <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-100">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-emerald-100 rounded-lg">
-              <ClipboardDocumentListIcon className="h-5 w-5 text-emerald-600" />
-            </div>
-            <h3 className="text-xl font-semibold text-slate-800">프로젝트 상태</h3>
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-100">
+          <div className="flex items-center gap-2 mb-3">
+            <ClipboardDocumentListIcon className="h-4 w-4 text-emerald-600" />
+            <h3 className="text-sm font-semibold text-slate-800">프로젝트 상태</h3>
           </div>
           <SimpleChart
             type="pie"

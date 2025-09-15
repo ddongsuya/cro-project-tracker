@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo } from 'react';
 import type { Client } from '../types';
 import ChartBarIcon from './icons/ChartBarIcon';
 import CurrencyDollarIcon from './icons/CurrencyDollarIcon';

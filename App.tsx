@@ -724,16 +724,53 @@ function App() {
               />
             ) : (
             <div className="space-y-6">
-              {/* 메뉴별 콘텐츠 */}
+              {/* 기존 프로젝트 관리 구조 복원 */}
               {selectedMenu === 'my-projects' ? (
-                <ProjectFilter
-                  clients={filteredClients}
-                  filterType={selectedSubmenu || 'all'}
-                  onSelectProject={handleSelectProject}
-                  onAddProject={() => setModalState({ type: 'ADD_PROJECT' })}
-                  onEditProject={(project, requesterId) => setModalState({ type: 'EDIT_PROJECT', project, requesterId })}
-                  onDeleteProject={handleDeleteProject}
-                />
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                  {/* 고객사 목록 */}
+                  <div className="lg:col-span-1">
+                    <ClientList
+                      clients={filteredClients}
+                      selectedClientId={selectedClientId}
+                      onSelectClient={handleSelectClient}
+                      onAddClient={() => setModalState({ type: 'ADD_CLIENT' })}
+                      onDeleteClient={handleDeleteClient}
+                    />
+                  </div>
+                  
+                  {/* 프로젝트 목록 */}
+                  <div className="lg:col-span-1">
+                    <ProjectList
+                      client={selectedClient}
+                      selectedProjectId={selectedProjectId}
+                      onSelectProject={handleSelectProject}
+                      onAddProject={() => setModalState({ type: 'ADD_PROJECT' })}
+                      onEditProject={(project, requesterId) => setModalState({ type: 'EDIT_PROJECT', project, requesterId })}
+                      onDeleteProject={handleDeleteProject}
+                      onAddRequester={() => setModalState({ type: 'ADD_REQUESTER' })}
+                      onDeleteRequester={handleDeleteRequester}
+                    />
+                  </div>
+                  
+                  {/* 프로젝트 타임라인 */}
+                  <div className="lg:col-span-2">
+                    {selectedProject ? (
+                      <ProjectTimeline
+                        project={selectedProject}
+                        onUpdateProject={handleUpdateProject}
+                        onAddTest={() => setModalState({ type: 'ADD_TEST' })}
+                        onEditTest={(test) => setModalState({ type: 'EDIT_TEST', test })}
+                        onDeleteTest={handleDeleteTest}
+                      />
+                    ) : (
+                      <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-100 text-center">
+                        <div className="text-6xl mb-4">📋</div>
+                        <h3 className="text-xl font-semibold text-slate-700 mb-2">프로젝트를 선택하세요</h3>
+                        <p className="text-slate-500">왼쪽에서 고객사와 프로젝트를 선택하면 상세 정보가 표시됩니다.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               ) : selectedMenu === 'clients' ? (
                 selectedSubmenu === 'add' ? (
                   <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-100">
@@ -746,24 +783,91 @@ function App() {
                       clients={clients} 
                       onFilteredResults={handleFilteredResults}
                     />
-                    <ProjectFilter
-                      clients={filteredClients}
-                      filterType="all"
-                      onSelectProject={handleSelectProject}
-                      onAddProject={() => setModalState({ type: 'ADD_PROJECT' })}
-                      onEditProject={(project, requesterId) => setModalState({ type: 'EDIT_PROJECT', project, requesterId })}
-                      onDeleteProject={handleDeleteProject}
-                    />
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                      <div className="lg:col-span-1">
+                        <ClientList
+                          clients={filteredClients}
+                          selectedClientId={selectedClientId}
+                          onSelectClient={handleSelectClient}
+                          onAddClient={() => setModalState({ type: 'ADD_CLIENT' })}
+                          onDeleteClient={handleDeleteClient}
+                        />
+                      </div>
+                      <div className="lg:col-span-1">
+                        <ProjectList
+                          client={selectedClient}
+                          selectedProjectId={selectedProjectId}
+                          onSelectProject={handleSelectProject}
+                          onAddProject={() => setModalState({ type: 'ADD_PROJECT' })}
+                          onEditProject={(project, requesterId) => setModalState({ type: 'EDIT_PROJECT', project, requesterId })}
+                          onDeleteProject={handleDeleteProject}
+                          onAddRequester={() => setModalState({ type: 'ADD_REQUESTER' })}
+                          onDeleteRequester={handleDeleteRequester}
+                        />
+                      </div>
+                      <div className="lg:col-span-2">
+                        {selectedProject ? (
+                          <ProjectTimeline
+                            project={selectedProject}
+                            onUpdateProject={handleUpdateProject}
+                            onAddTest={() => setModalState({ type: 'ADD_TEST' })}
+                            onEditTest={(test) => setModalState({ type: 'EDIT_TEST', test })}
+                            onDeleteTest={handleDeleteTest}
+                          />
+                        ) : (
+                          <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-100 text-center">
+                            <div className="text-6xl mb-4">🔍</div>
+                            <h3 className="text-xl font-semibold text-slate-700 mb-2">검색 결과에서 선택하세요</h3>
+                            <p className="text-slate-500">검색된 고객사와 프로젝트를 선택하면 상세 정보가 표시됩니다.</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 ) : (
-                  <ProjectFilter
-                    clients={filteredClients}
-                    filterType="all"
-                    onSelectProject={handleSelectProject}
-                    onAddProject={() => setModalState({ type: 'ADD_PROJECT' })}
-                    onEditProject={(project, requesterId) => setModalState({ type: 'EDIT_PROJECT', project, requesterId })}
-                    onDeleteProject={handleDeleteProject}
-                  />
+                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    <div className="lg:col-span-1">
+                      <ClientList
+                        clients={filteredClients}
+                        selectedClientId={selectedClientId}
+                        onSelectClient={handleSelectClient}
+                        onAddClient={() => setModalState({ type: 'ADD_CLIENT' })}
+                        onDeleteClient={handleDeleteClient}
+                      />
+                    </div>
+                    <div className="lg:col-span-1">
+                      <ProjectList
+                        client={selectedClient}
+                        selectedProjectId={selectedProjectId}
+                        onSelectProject={handleSelectProject}
+                        onAddProject={() => setModalState({ type: 'ADD_PROJECT' })}
+                        onEditProject={(project, requesterId) => setModalState({ type: 'EDIT_PROJECT', project, requesterId })}
+                        onDeleteProject={handleDeleteProject}
+                        onAddRequester={() => setModalState({ type: 'ADD_REQUESTER' })}
+                        onDeleteRequester={handleDeleteRequester}
+                      />
+                    </div>
+                    <div className="lg:col-span-2">
+                      {selectedProject ? (
+                        <div className="space-y-6">
+                          <ProjectTimeline
+                            project={selectedProject}
+                            onUpdateProject={handleUpdateProject}
+                            onAddTest={() => setModalState({ type: 'ADD_TEST' })}
+                            onEditTest={(test) => setModalState({ type: 'EDIT_TEST', test })}
+                            onDeleteTest={handleDeleteTest}
+                          />
+                          <AIInsights project={selectedProject} client={selectedClient} />
+                        </div>
+                      ) : (
+                        <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-100 text-center">
+                          <div className="text-6xl mb-4">📋</div>
+                          <h3 className="text-xl font-semibold text-slate-700 mb-2">프로젝트를 선택하세요</h3>
+                          <p className="text-slate-500">왼쪽에서 고객사와 프로젝트를 선택하면 상세 정보가 표시됩니다.</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 )
               ) : selectedMenu === 'analytics' ? (
                 selectedSubmenu === 'export' ? (

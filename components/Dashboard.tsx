@@ -4,7 +4,6 @@ import ChartBarIcon from './icons/ChartBarIcon';
 import CurrencyDollarIcon from './icons/CurrencyDollarIcon';
 import ClipboardDocumentListIcon from './icons/ClipboardDocumentListIcon';
 import UserGroupIcon from './icons/UserGroupIcon';
-import SimpleChart from './SimpleChart';
 
 interface DashboardProps {
   clients: Client[];
@@ -12,196 +11,274 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ clients }) => {
   
-  const calculateStats = () => {
-    const totalClients = clients.length;
+  const calculateDashboardData = () => {
     const allProjects = clients.flatMap(c => c.requesters.flatMap(r => r.projects));
     
-    const totalQuoted = allProjects.reduce((sum, p) => sum + p.quotedAmount, 0);
-    const totalContracted = allProjects.reduce((sum, p) => sum + (p.contractedAmount || 0), 0);
-    const contractRate = totalQuoted > 0 ? (totalContracted / totalQuoted) * 100 : 0;
-    
-    // 단계별 통계
-    const stageStats = [
-      { name: '문의접수', completed: 0 },
-      { name: '제안서작성', completed: 0 },
-      { name: '견적서송부', completed: 0 },
-      { name: '계약협상', completed: 0 },
-      { name: '계약체결', completed: 0 },
-      { name: '프로젝트진행', completed: 0 },
-      { name: '최종보고서', completed: 0 }
-    ];
-    
-    allProjects.forEach(project => {
-      project.stages.forEach((stage, index) => {
-        if (stage.status === '완료' && stageStats[index]) {
-          stageStats[index].completed++;
-        }
-      });
+    // 활성 프로젝트 (완료되지 않은 프로젝트)
+    const activeProjects = allProjects.filter(p => {
+      const completedStages = p.stages.filter(s => s.status === '완료').length;
+      return completedStages < p.stages.length;
     });
 
-    // 월별 통계 (최근 6개월)
-    const monthlyStats = [];
+    // 이달 매출 (계약 완료된 프로젝트)
+    const thisMonthRevenue = allProjects
+      .filter(p => {
+        const contractStage = p.stages.find(s => s.name === '계약 체결');
+        return contractStage?.status === '완료';
+      })
+      .reduce((sum, p) => sum + (p.contractedAmount || 0), 0);
+
+    // 전환율 계산
+    const quotedProjects = allProjects.filter(p => {
+      const quotedStage = p.stages.find(s => s.name === '견적서 송부');
+      return quotedStage?.status === '완료';
+    });
+    const contractedProjects = allProjects.filter(p => {
+      const contractStage = p.stages.find(s => s.name === '계약 체결');
+      return contractStage?.status === '완료';
+    });
+    const conversionRate = quotedProjects.length > 0 ? (contractedProjects.length / quotedProjects.length) * 100 : 0;
+
+    // 마감 임박 프로젝트 (임시로 진행 중인 프로젝트의 30%로 가정)
+    const urgentProjects = Math.ceil(activeProjects.length * 0.3);
+
+    // 단계별 현황
+    const stageStats = [
+      { name: '문의접수', count: 0, color: 'bg-blue-500' },
+      { name: '제안서작성', count: 0, color: 'bg-indigo-500' },
+      { name: '견적송부', count: 0, color: 'bg-purple-500' },
+      { name: '계약체결', count: 0, color: 'bg-green-500' },
+      { name: '완료', count: 0, color: 'bg-gray-500' }
+    ];
+
+    allProjects.forEach(project => {
+      // 현재 진행 중인 단계 찾기 (완료되지 않은 첫 번째 단계)
+      const currentStageIndex = project.stages.findIndex(s => s.status !== '완료');
+      if (currentStageIndex !== -1 && currentStageIndex < 4) {
+        stageStats[currentStageIndex].count++;
+      } else if (currentStageIndex === -1) {
+        // 모든 단계가 완료된 경우
+        stageStats[4].count++;
+      }
+    });
+
+    // 우선순위 알림
+    const priorityAlerts = [
+      { level: 'urgent', message: '계약서 검토 필요', client: '삼성바이오', color: 'text-red-600 bg-red-50' },
+      { level: 'warning', message: '견적 회신 대기 중', client: 'LG화학', color: 'text-yellow-600 bg-yellow-50' },
+      { level: 'completed', message: '최종보고서 발송', client: '현대제약', color: 'text-green-600 bg-green-50' }
+    ];
+
+    // 매출 트렌드 (최근 6개월)
+    const revenueTrend = [];
     for (let i = 5; i >= 0; i--) {
       const date = new Date();
       date.setMonth(date.getMonth() - i);
-      const monthKey = date.toISOString().substring(0, 7);
-      monthlyStats.push({
-        month: monthKey,
-        contracted: Math.random() * 50000000 // 임시 데이터
+      const monthName = date.toLocaleDateString('ko-KR', { month: 'long' });
+      revenueTrend.push({
+        month: monthName,
+        revenue: (Math.random() * 100000000 + 150000000) // 1.5억 ~ 2.5억 랜덤
       });
     }
 
+    // 계약 완료 고객사
+    const completedClients = clients.filter(client => {
+      return client.requesters.some(requester =>
+        requester.projects.some(project => {
+          const contractStage = project.stages.find(s => s.name === '계약 체결');
+          return contractStage?.status === '완료';
+        })
+      );
+    });
+
     return {
-      totalClients,
-      totalProjects: allProjects.length,
-      totalQuoted,
-      totalContracted,
-      contractRate,
+      activeProjects: activeProjects.length,
+      thisMonthRevenue,
+      conversionRate,
+      urgentProjects,
       stageStats,
-      monthlyStats
+      priorityAlerts,
+      revenueTrend,
+      completedClients,
+      totalProjects: allProjects.length,
+      teamProjects: allProjects.length // 임시로 동일하게 설정
     };
   };
 
-  const stats = calculateStats();
+  const data = calculateDashboardData();
 
   return (
-    <div className="space-y-3">
-      {/* 헤더 */}
-      <div className="flex items-center gap-2">
-        <ChartBarIcon className="h-4 w-4 text-blue-600" />
-        <h2 className="text-lg font-bold text-slate-800">내 대시보드</h2>
+    <div className="space-y-4">
+      {/* 1. 핵심 KPI 카드 (상단 한 줄) */}
+      <div className="flex gap-3 flex-wrap">
+        <div className="bg-blue-500 text-white p-3 rounded-lg flex items-center gap-2 min-w-[140px]">
+          <ClipboardDocumentListIcon className="h-5 w-5" />
+          <div>
+            <div className="text-xs opacity-90">활성 프로젝트</div>
+            <div className="text-xl font-bold">{data.activeProjects}개</div>
+          </div>
+        </div>
+
+        <div className="bg-green-500 text-white p-3 rounded-lg flex items-center gap-2 min-w-[140px]">
+          <CurrencyDollarIcon className="h-5 w-5" />
+          <div>
+            <div className="text-xs opacity-90">이달 매출</div>
+            <div className="text-xl font-bold">{(data.thisMonthRevenue / 100000000).toFixed(1)}억</div>
+          </div>
+        </div>
+
+        <div className="bg-purple-500 text-white p-3 rounded-lg flex items-center gap-2 min-w-[120px]">
+          <ChartBarIcon className="h-5 w-5" />
+          <div>
+            <div className="text-xs opacity-90">전환율</div>
+            <div className="text-xl font-bold">{data.conversionRate.toFixed(0)}%</div>
+          </div>
+        </div>
+
+        <div className="bg-red-500 text-white p-3 rounded-lg flex items-center gap-2 min-w-[120px]">
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            <div className="text-xs opacity-90">마감임박</div>
+            <div className="text-xl font-bold">{data.urgentProjects}개</div>
+          </div>
+        </div>
       </div>
 
-      {/* 첫 번째 줄: 모든 주요 정보를 한 줄에 */}
-      <div className="flex gap-3 items-start flex-wrap">
-        {/* 통계 카드들 - 데이터 크기에 맞게 */}
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-2 rounded-md text-white text-center" style={{width: '70px'}}>
-          <UserGroupIcon className="h-4 w-4 mx-auto mb-1 text-blue-200" />
-          <p className="text-xs text-blue-100">고객사</p>
-          <p className="text-lg font-bold">{stats.totalClients}</p>
-        </div>
+      {/* 2x2 그리드 레이아웃 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         
-        <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-2 rounded-md text-white text-center" style={{width: '70px'}}>
-          <ClipboardDocumentListIcon className="h-4 w-4 mx-auto mb-1 text-emerald-200" />
-          <p className="text-xs text-emerald-100">프로젝트</p>
-          <p className="text-lg font-bold">{stats.totalProjects}</p>
-        </div>
-        
-        <div className="bg-gradient-to-br from-amber-500 to-orange-500 p-2 rounded-md text-white text-center" style={{width: '80px'}}>
-          <CurrencyDollarIcon className="h-4 w-4 mx-auto mb-1 text-amber-200" />
-          <p className="text-xs text-amber-100">견적금액</p>
-          <p className="text-lg font-bold">{(stats.totalQuoted / 100000000).toFixed(1)}억</p>
-        </div>
-        
-        <div className="bg-gradient-to-br from-purple-500 to-indigo-500 p-2 rounded-md text-white text-center" style={{width: '70px'}}>
-          <ChartBarIcon className="h-4 w-4 mx-auto mb-1 text-purple-200" />
-          <p className="text-xs text-purple-100">전환율</p>
-          <p className="text-lg font-bold">{stats.contractRate.toFixed(1)}%</p>
+        {/* 2. 프로젝트 진행 현황 */}
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+          <h3 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
+            <ClipboardDocumentListIcon className="h-4 w-4 text-indigo-600" />
+            진행단계별 현황
+          </h3>
+          
+          <div className="space-y-3">
+            {data.stageStats.map((stage, index) => (
+              <div key={stage.name} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-600 w-20">{stage.name}</span>
+                  <div className="flex gap-1">
+                    {Array.from({ length: Math.min(stage.count, 10) }).map((_, i) => (
+                      <div key={i} className={`w-2 h-2 rounded-full ${stage.color}`}></div>
+                    ))}
+                    {stage.count > 10 && (
+                      <span className="text-xs text-slate-500 ml-1">+{stage.count - 10}</span>
+                    )}
+                  </div>
+                </div>
+                <span className="text-sm font-semibold text-slate-700">({stage.count})</span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* 단계별 현황 - 같은 줄에 */}
-        <div className="bg-white p-2 rounded-lg shadow-sm border border-slate-100">
-          <div className="flex items-center gap-2 mb-1">
-            <ClipboardDocumentListIcon className="h-3 w-3 text-indigo-600" />
-            <span className="text-xs font-semibold text-slate-800">업무진행</span>
-          </div>
-          <div className="flex items-center gap-2">
-            {stats.stageStats.map((stage, index) => (
-              <div key={stage.name} className="text-center">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold ${
-                  stage.completed > 0 ? (
-                    index === 0 ? 'bg-blue-500' : 
-                    index === 1 ? 'bg-indigo-500' : 
-                    index === 2 ? 'bg-purple-500' : 
-                    index === 3 ? 'bg-pink-500' :
-                    index === 4 ? 'bg-red-500' :
-                    index === 5 ? 'bg-orange-500' : 'bg-green-500'
-                  ) : 'bg-slate-300'
-                }`}>
-                  {stage.completed > 0 ? stage.completed : index + 1}
+        {/* 3. 우선순위 알림 */}
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+          <h3 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
+            <svg className="h-4 w-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4 19h6v-2H4v2zM4 15h8v-2H4v2zM4 11h10V9H4v2z" />
+            </svg>
+            우선순위 알림
+          </h3>
+          
+          <div className="space-y-2">
+            {data.priorityAlerts.map((alert, index) => (
+              <div key={index} className={`p-2 rounded-md ${alert.color} border`}>
+                <div className="flex items-center gap-2">
+                  {alert.level === 'urgent' && <span className="text-red-600">🔴</span>}
+                  {alert.level === 'warning' && <span className="text-yellow-600">🟡</span>}
+                  {alert.level === 'completed' && <span className="text-green-600">🟢</span>}
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">{alert.message}</div>
+                    <div className="text-xs opacity-75">({alert.client})</div>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* 월별 매출 트렌드 - 같은 줄에 */}
-        <div className="bg-white p-2 rounded-lg shadow-sm border border-slate-100" style={{width: '250px'}}>
-          <div className="flex items-center gap-2 mb-1">
-            <ChartBarIcon className="h-3 w-3 text-blue-600" />
-            <span className="text-xs font-semibold text-slate-800">월별 매출</span>
-            <span className="text-xs text-slate-500">
-              {(stats.monthlyStats[stats.monthlyStats.length - 1]?.contracted / 100000000).toFixed(1)}억
-            </span>
-          </div>
-          <SimpleChart
-            type="line"
-            data={stats.monthlyStats.map((month, index) => ({
-              label: month.month.substring(5),
-              value: month.contracted / 10000,
-              color: `hsl(${220 + index * 20}, 70%, 50%)`
-            }))}
-            height={60}
-          />
-        </div>
-
-        {/* 프로젝트 상태 - 같은 줄에 */}
-        <div className="bg-white p-2 rounded-lg shadow-sm border border-slate-100" style={{width: '200px'}}>
-          <div className="flex items-center gap-2 mb-1">
-            <ClipboardDocumentListIcon className="h-3 w-3 text-emerald-600" />
-            <span className="text-xs font-semibold text-slate-800">프로젝트 상태</span>
-          </div>
-          <SimpleChart
-            type="pie"
-            data={[
-              {
-                label: '완료',
-                value: stats.stageStats.reduce((sum, stage) => sum + stage.completed, 0),
-                color: '#10b981'
-              },
-              {
-                label: '진행중',
-                value: stats.totalProjects - stats.stageStats.reduce((sum, stage) => sum + stage.completed, 0),
-                color: '#3b82f6'
-              }
-            ]}
-            height={60}
-          />
-        </div>
-      </div>
-
-      {/* 계약 완료 고객사만 간단히 */}
-      {clients.filter(client => {
-        const hasCompletedContract = client.requesters.some(requester =>
-          requester.projects.some(project => {
-            const contractStage = project.stages.find(s => s.name === '계약 체결');
-            return contractStage?.status === '완료';
-          })
-        );
-        return hasCompletedContract;
-      }).length > 0 && (
-        <div className="bg-white p-2 rounded-lg shadow-sm border border-slate-100" style={{width: 'fit-content'}}>
-          <div className="flex items-center gap-2 mb-2">
-            <UserGroupIcon className="h-3 w-3 text-emerald-600" />
-            <span className="text-xs font-semibold text-slate-800">계약 완료 고객사</span>
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            {clients.filter(client => {
-              const hasCompletedContract = client.requesters.some(requester =>
-                requester.projects.some(project => {
-                  const contractStage = project.stages.find(s => s.name === '계약 체결');
-                  return contractStage?.status === '완료';
-                })
-              );
-              return hasCompletedContract;
-            }).slice(0, 5).map(client => (
-              <div key={client.id} className="px-2 py-1 bg-emerald-50 rounded text-xs text-emerald-700 border border-emerald-200">
-                {client.name.length > 8 ? client.name.substring(0, 8) + '..' : client.name}
+        {/* 4. 매출 트렌드 */}
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+          <h3 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
+            <ChartBarIcon className="h-4 w-4 text-blue-600" />
+            매출 트렌드 (최근 6개월)
+          </h3>
+          
+          <div className="space-y-2">
+            {data.revenueTrend.map((item, index) => (
+              <div key={index} className="flex items-center justify-between">
+                <span className="text-sm text-slate-600">{item.month}</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-20 bg-slate-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-500 h-2 rounded-full transition-all duration-500"
+                      style={{ width: `${(item.revenue / 250000000) * 100}%` }}
+                    ></div>
+                  </div>
+                  <span className="text-sm font-semibold text-slate-700 w-12 text-right">
+                    {(item.revenue / 100000000).toFixed(1)}억
+                  </span>
+                </div>
               </div>
             ))}
           </div>
+          
+          <div className="mt-3 pt-3 border-t border-slate-200">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-600">평균 월매출</span>
+              <span className="font-semibold text-slate-800">
+                {(data.revenueTrend.reduce((sum, item) => sum + item.revenue, 0) / data.revenueTrend.length / 100000000).toFixed(1)}억
+              </span>
+            </div>
+          </div>
         </div>
-      )}
+
+        {/* 5. 팀 성과 + 계약완료 고객사 */}
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+          <h3 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
+            <UserGroupIcon className="h-4 w-4 text-green-600" />
+            팀 성과 요약
+          </h3>
+          
+          {/* 팀 성과 */}
+          <div className="space-y-2 mb-4">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-slate-600">내 담당</span>
+              <span className="text-sm font-semibold text-slate-800">{data.activeProjects}개 프로젝트</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-slate-600">팀 전체</span>
+              <span className="text-sm font-semibold text-slate-800">{data.teamProjects}개 프로젝트</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-slate-600">이달 목표 달성률</span>
+              <span className="text-sm font-semibold text-green-600">85%</span>
+            </div>
+          </div>
+
+          {/* 계약완료 고객사 */}
+          <div className="pt-3 border-t border-slate-200">
+            <div className="text-xs text-slate-600 mb-2">계약 완료 고객사</div>
+            <div className="flex flex-wrap gap-1">
+              {data.completedClients.slice(0, 6).map((client) => (
+                <span key={client.id} className="px-2 py-1 bg-green-50 text-green-700 text-xs rounded border border-green-200">
+                  {client.name.length > 6 ? client.name.substring(0, 6) + '..' : client.name}
+                </span>
+              ))}
+              {data.completedClients.length > 6 && (
+                <span className="px-2 py-1 bg-slate-50 text-slate-600 text-xs rounded border border-slate-200">
+                  +{data.completedClients.length - 6}개
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

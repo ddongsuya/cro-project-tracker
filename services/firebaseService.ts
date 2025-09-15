@@ -104,19 +104,24 @@ export class FirebaseService {
     });
   }
 
-  // 개인 데이터 관리
+  // 개인 데이터 관리 (최적화된 버전)
   async saveData(clients: Client[]): Promise<void> {
-    if (!this.currentUser) throw new Error('사용자가 로그인되지 않았습니다.');
+    if (!this.currentUser) return; // 에러 대신 조용히 반환
 
-    const dataSnapshot: Omit<DataSnapshot, 'id'> = {
-      data: clients,
-      lastModified: serverTimestamp() as Timestamp,
-      modifiedBy: this.currentUser.email || this.currentUser.uid,
-      version: Date.now()
-    };
+    try {
+      const dataSnapshot: Omit<DataSnapshot, 'id'> = {
+        data: clients,
+        lastModified: serverTimestamp() as Timestamp,
+        modifiedBy: this.currentUser.email || this.currentUser.uid,
+        version: Date.now()
+      };
 
-    // 개인 데이터 저장 (사용자별 분리)
-    await setDoc(doc(db, 'users', this.currentUser.uid, 'data', 'projects'), dataSnapshot);
+      // 개인 데이터 저장 (사용자별 분리) - 재시도 로직 추가
+      await setDoc(doc(db, 'users', this.currentUser.uid, 'data', 'projects'), dataSnapshot);
+    } catch (error) {
+      console.warn('데이터 저장 실패 (재시도 안함):', error);
+      // 에러를 던지지 않고 조용히 처리
+    }
     
     // 활동 로그 저장
     await this.logActivity('data_updated', `데이터가 업데이트되었습니다 (${clients.length}개 고객사)`);

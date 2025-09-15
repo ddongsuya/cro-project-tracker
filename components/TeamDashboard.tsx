@@ -7,6 +7,8 @@ import CurrencyDollarIcon from './icons/CurrencyDollarIcon';
 import ClipboardDocumentListIcon from './icons/ClipboardDocumentListIcon';
 import SimpleChart from './SimpleChart';
 import { SkeletonDashboard } from './SkeletonCard';
+import DashboardLayout from './DashboardLayout';
+import StatCard from './StatCard';
 
 interface TeamDashboardProps {
   clients: Client[];
@@ -25,7 +27,7 @@ interface TeamStats {
   recentActivities: any[];
 }
 
-const TeamDashboard = React.memo<TeamDashboardProps>(({ clients, currentUser }) => {
+const TeamDashboard: React.FC<TeamDashboardProps> = ({ clients, currentUser }) => {
   const [currentUserTeam, setCurrentUserTeam] = useState<string>('');
   const [teamStats, setTeamStats] = useState<TeamStats | null>(null);
   const [allTeamMembers, setAllTeamMembers] = useState<TeamMember[]>([]);
@@ -163,26 +165,7 @@ const TeamDashboard = React.memo<TeamDashboardProps>(({ clients, currentUser }) 
     }
   };
 
-  const StatCard: React.FC<{
-    title: string;
-    value: string | number;
-    icon: React.ReactNode;
-    color: string;
-    subtitle?: string;
-  }> = ({ title, value, icon, color, subtitle }) => (
-    <div className="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-slate-100 group">
-      <div className="flex items-center">
-        <div className={`p-4 rounded-2xl ${color} group-hover:scale-110 transition-transform duration-300`}>
-          {icon}
-        </div>
-        <div className="ml-5 flex-1">
-          <p className="text-sm font-medium text-slate-600 uppercase tracking-wide">{title}</p>
-          <p className="text-3xl font-bold text-slate-900 mt-1">{value}</p>
-          {subtitle && <p className="text-sm text-slate-500 mt-1">{subtitle}</p>}
-        </div>
-      </div>
-    </div>
-  );
+
 
   if (loading) {
     return <SkeletonDashboard />;
@@ -199,94 +182,69 @@ const TeamDashboard = React.memo<TeamDashboardProps>(({ clients, currentUser }) 
   }
 
   return (
-    <div className="space-y-4">
-      {/* 컴팩트한 팀 헤더 */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className={`p-2 bg-gradient-to-r ${getTeamColor(currentUserTeam)} rounded-lg`}>
-          <UserGroupIcon className="h-5 w-5 text-white" />
-        </div>
-        <div>
-          <h2 className="text-xl font-bold text-slate-800">{teamStats.teamName} 대시보드</h2>
-          <p className="text-slate-500 text-sm">{teamStats.memberCount}명의 팀원</p>
-        </div>
+    <DashboardLayout
+      title={`${teamStats.teamName} 대시보드`}
+      subtitle={`${teamStats.memberCount}명의 팀원과 함께하는 협업 현황`}
+      icon={<UserGroupIcon className="h-5 w-5 text-white" />}
+      headerColor={getTeamColor(currentUserTeam)}
+    >
+      {/* 팀 성과 지표 */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <StatCard
+          title="팀 프로젝트"
+          value={teamStats.totalProjects}
+          icon={<ClipboardDocumentListIcon className="h-5 w-5 text-white" />}
+          color="bg-gradient-to-br from-blue-500 to-blue-600"
+          compact
+        />
+        <StatCard
+          title="팀 견적금액"
+          value={`${(teamStats.totalQuoted / 100000000).toFixed(1)}억`}
+          icon={<CurrencyDollarIcon className="h-5 w-5 text-white" />}
+          color="bg-gradient-to-br from-emerald-500 to-emerald-600"
+          compact
+        />
+        <StatCard
+          title="계약 전환율"
+          value={`${teamStats.contractRate.toFixed(1)}%`}
+          icon={<ChartBarIcon className="h-5 w-5 text-white" />}
+          color="bg-gradient-to-br from-amber-500 to-orange-500"
+          compact
+        />
+        <StatCard
+          title="팀원 수"
+          value={teamStats.memberCount}
+          icon={<UserGroupIcon className="h-5 w-5 text-white" />}
+          color="bg-gradient-to-br from-purple-500 to-indigo-500"
+          compact
+        />
       </div>
 
-      {/* 초컴팩트 팀 성과 지표 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-3 rounded-lg text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-blue-100 text-xs">팀 프로젝트</p>
-              <p className="text-xl font-bold">{teamStats.totalProjects}</p>
-            </div>
-            <ClipboardDocumentListIcon className="h-6 w-6 text-blue-200" />
-          </div>
-        </div>
+      {/* 팀원 현황 */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          <UserGroupIcon className="h-5 w-5 text-blue-600" />
+          팀 멤버 ({teamStats.memberCount}명)
+        </h3>
         
-        <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-3 rounded-lg text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-emerald-100 text-xs">팀 견적금액</p>
-              <p className="text-xl font-bold">{(teamStats.totalQuoted / 100000000).toFixed(1)}억</p>
-            </div>
-            <CurrencyDollarIcon className="h-6 w-6 text-emerald-200" />
-          </div>
-        </div>
-        
-        <div className="bg-gradient-to-br from-amber-500 to-orange-500 p-3 rounded-lg text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-amber-100 text-xs">계약 전환율</p>
-              <p className="text-xl font-bold">{teamStats.contractRate.toFixed(1)}%</p>
-            </div>
-            <ChartBarIcon className="h-6 w-6 text-amber-200" />
-          </div>
-        </div>
-        
-        <div className="bg-gradient-to-br from-purple-500 to-indigo-500 p-3 rounded-lg text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-purple-100 text-xs">팀원 수</p>
-              <p className="text-xl font-bold">{teamStats.memberCount}</p>
-            </div>
-            <UserGroupIcon className="h-6 w-6 text-purple-200" />
-          </div>
-        </div>
-      </div>
-
-      {/* 초컴팩트 팀원 현황 */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-100">
-        <div className="flex items-center gap-2 mb-3">
-          <UserGroupIcon className="h-4 w-4 text-blue-600" />
-          <h3 className="text-base font-semibold text-slate-800">{teamStats.teamName} 멤버</h3>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {teamStats.members.map((member) => (
-            <div
-              key={member.id}
-              className="p-4 bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl border border-slate-200 hover:shadow-md transition-all duration-200"
-            >
+            <div key={member.id} className="p-3 bg-gray-50 rounded-lg border hover:shadow-sm transition-all">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full bg-gradient-to-r ${getTeamColor(member.team)} flex items-center justify-center text-white font-bold`}>
+                <div className={`w-8 h-8 rounded-full bg-gradient-to-r ${getTeamColor(member.team)} flex items-center justify-center text-white font-bold text-sm`}>
                   {member.name.charAt(0)}
                 </div>
-                <div className="flex-1">
-                  <div className="font-medium text-slate-800">{member.name}</div>
-                  <div className="text-sm text-slate-500">{member.email}</div>
-                  {member.position && (
-                    <div className="text-xs text-slate-400 mt-1">{member.position}</div>
-                  )}
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-gray-800 truncate">{member.name}</div>
+                  <div className="text-xs text-gray-500 truncate">{member.email}</div>
                 </div>
-                <div className="text-right">
-                  <div className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    member.role === 'admin' ? 'bg-red-100 text-red-700' :
-                    member.role === 'editor' ? 'bg-blue-100 text-blue-700' :
-                    'bg-gray-100 text-gray-700'
-                  }`}>
-                    {member.role === 'admin' ? '관리자' : 
-                     member.role === 'editor' ? '편집자' : '뷰어'}
-                  </div>
+                <div className={`px-2 py-1 text-xs font-medium rounded-full ${
+                  member.role === 'admin' ? 'bg-red-100 text-red-700' :
+                  member.role === 'editor' ? 'bg-blue-100 text-blue-700' :
+                  'bg-gray-100 text-gray-700'
+                }`}>
+                  {member.role === 'admin' ? '관리자' : 
+                   member.role === 'editor' ? '편집자' : '뷰어'}
                 </div>
               </div>
             </div>
@@ -295,14 +253,12 @@ const TeamDashboard = React.memo<TeamDashboardProps>(({ clients, currentUser }) 
       </div>
 
       {/* 팀 성과 차트 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-100">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <ChartBarIcon className="h-5 w-5 text-green-600" />
-            </div>
-            <h3 className="text-xl font-semibold text-slate-800">프로젝트 진행 현황</h3>
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <ChartBarIcon className="h-5 w-5 text-green-600" />
+            프로젝트 진행 현황
+          </h3>
           <SimpleChart
             type="pie"
             data={[
@@ -321,23 +277,21 @@ const TeamDashboard = React.memo<TeamDashboardProps>(({ clients, currentUser }) 
           />
         </div>
 
-        <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-100">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <CurrencyDollarIcon className="h-5 w-5 text-purple-600" />
-            </div>
-            <h3 className="text-xl font-semibold text-slate-800">매출 현황</h3>
-          </div>
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <CurrencyDollarIcon className="h-5 w-5 text-purple-600" />
+            매출 현황
+          </h3>
           <SimpleChart
             type="pie"
             data={[
               {
-                label: `계약 완료 (${(teamStats.totalContracted / 100000000).toFixed(1)}억원)`,
+                label: `계약완료 ${(teamStats.totalContracted / 100000000).toFixed(1)}억`,
                 value: teamStats.totalContracted,
                 color: '#059669'
               },
               {
-                label: `견적 대기 (${((teamStats.totalQuoted - teamStats.totalContracted) / 100000000).toFixed(1)}억원)`,
+                label: `견적대기 ${((teamStats.totalQuoted - teamStats.totalContracted) / 100000000).toFixed(1)}억`,
                 value: teamStats.totalQuoted - teamStats.totalContracted,
                 color: '#d97706'
               }
@@ -346,27 +300,7 @@ const TeamDashboard = React.memo<TeamDashboardProps>(({ clients, currentUser }) 
           />
         </div>
       </div>
-
-      {/* 실시간 팀 활동 */}
-      <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-100">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-indigo-100 rounded-lg">
-            <ClipboardDocumentListIcon className="h-5 w-5 text-indigo-600" />
-          </div>
-          <h3 className="text-xl font-semibold text-slate-800">팀 활동 현황</h3>
-          <div className="ml-auto flex items-center gap-2 text-sm text-green-600">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span>실시간 동기화</span>
-          </div>
-        </div>
-        
-        <div className="text-center py-8 text-slate-500">
-          <ClipboardDocumentListIcon className="h-12 w-12 mx-auto mb-2 text-slate-300" />
-          <p>팀 활동 로그가 여기에 표시됩니다</p>
-          <p className="text-sm mt-1">프로젝트 업데이트, 새 고객사 추가 등</p>
-        </div>
-      </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

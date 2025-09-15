@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { Client, Project } from '../types';
 import { FirebaseService, TeamMember } from '../services/firebaseService';
 import ChartBarIcon from './icons/ChartBarIcon';
@@ -6,6 +6,9 @@ import UserGroupIcon from './icons/UserGroupIcon';
 import CurrencyDollarIcon from './icons/CurrencyDollarIcon';
 import ClipboardDocumentListIcon from './icons/ClipboardDocumentListIcon';
 import SimpleChart from './SimpleChart';
+import DashboardLayout from './DashboardLayout';
+import StatCard from './StatCard';
+import { SkeletonDashboard } from './SkeletonCard';
 
 interface CompanyDashboardProps {
   clients: Client[];
@@ -35,18 +38,14 @@ interface TeamPerformance {
   contractRate: number;
 }
 
-const CompanyDashboard: React.FC<CompanyDashboardProps> = ({ clients, currentUser }) => {
+const CompanyDashboard = React.memo<CompanyDashboardProps>(({ clients, currentUser }) => {
   const [companyStats, setCompanyStats] = useState<CompanyStats | null>(null);
   const [allTeamMembers, setAllTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
 
   const firebaseService = FirebaseService.getInstance();
 
-  useEffect(() => {
-    loadCompanyData();
-  }, [currentUser, clients]);
-
-  const loadCompanyData = async () => {
+  const loadCompanyData = useMemo(() => async () => {
     try {
       const members = await firebaseService.getTeamMembers();
       setAllTeamMembers(members);
@@ -56,7 +55,13 @@ const CompanyDashboard: React.FC<CompanyDashboardProps> = ({ clients, currentUse
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentUser, clients]);
+
+  useEffect(() => {
+    loadCompanyData();
+  }, [loadCompanyData]);
+
+
 
   const calculateCompanyStats = async (members: TeamMember[]) => {
     const team1Members = members.filter(m => m.team === 'business_dev_1');
@@ -362,6 +367,8 @@ const CompanyDashboard: React.FC<CompanyDashboardProps> = ({ clients, currentUse
       </div>
     </div>
   );
-};
+});
+
+CompanyDashboard.displayName = 'CompanyDashboard';
 
 export default CompanyDashboard;

@@ -19,10 +19,12 @@ export default defineConfig(({ mode }) => {
           output: {
             manualChunks: {
               vendor: ['react', 'react-dom'],
+              firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
               utils: ['jspdf', 'html2canvas']
             }
           }
-        }
+        },
+        chunkSizeWarningLimit: 1000
       },
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),

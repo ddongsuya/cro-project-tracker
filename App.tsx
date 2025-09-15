@@ -1,36 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense, lazy } from 'react';
 import { flushSync } from 'react-dom';
-import ClientList from './components/ClientList';
-import ProjectTimeline from './components/ProjectTimeline';
-import ProjectList from './components/ProjectList';
-import Dashboard from './components/Dashboard';
-import SearchAndFilter from './components/SearchAndFilter';
 import NotificationSystem from './components/NotificationSystem';
-import DataManagement from './components/DataManagement';
+
+// 통합 대시보드 import
+const UnifiedDashboard = lazy(() => import('./components/UnifiedDashboard'));
+
+// 지연 로딩 컴포넌트들
+const ClientList = lazy(() => import('./components/ClientList'));
+const ProjectTimeline = lazy(() => import('./components/ProjectTimeline'));
+const ProjectList = lazy(() => import('./components/ProjectList'));
+const SearchAndFilter = lazy(() => import('./components/SearchAndFilter'));
+const DataManagement = lazy(() => import('./components/DataManagement'));
 import { EXACT_EXCEL_CLIENTS } from './data/exactExcelData';
 import { StorageService } from './services/storageService';
 import type { Client, Project, Test, Requester } from './types';
 import { DEFAULT_STAGES } from './constants';
-import Modal from './components/Modal';
-import ClientForm from './components/forms/ClientForm';
-import ProjectForm from './components/forms/ProjectForm';
-import TestForm from './components/forms/TestForm';
-import RequesterForm from './components/forms/RequesterForm';
-import AIInsights from './components/AIInsights';
-import PrintReport from './components/PrintReport';
-import AuthModal from './components/AuthModal';
-import TeamManagement from './components/TeamManagement';
-import TeamDashboard from './components/TeamDashboard';
-import CompanyDashboard from './components/CompanyDashboard';
-import Calendar from './components/Calendar';
+// 폼 컴포넌트들도 지연 로딩
+const Modal = lazy(() => import('./components/Modal'));
+const ClientForm = lazy(() => import('./components/forms/ClientForm'));
+const ProjectForm = lazy(() => import('./components/forms/ProjectForm'));
+const TestForm = lazy(() => import('./components/forms/TestForm'));
+const RequesterForm = lazy(() => import('./components/forms/RequesterForm'));
+const AIInsights = lazy(() => import('./components/AIInsights'));
+const PrintReport = lazy(() => import('./components/PrintReport'));
+// 더 많은 지연 로딩 컴포넌트들
+const AuthModal = lazy(() => import('./components/AuthModal'));
+const TeamManagement = lazy(() => import('./components/TeamManagement'));
+const Calendar = lazy(() => import('./components/Calendar'));
 import { FirebaseService } from './services/firebaseService';
 import { useForceUpdate } from './hooks/useForceUpdate';
 import { useIsMobile } from './hooks/useMediaQuery';
-import MobileBottomNav from './components/MobileBottomNav';
-import MobileHeader from './components/MobileHeader';
-import MobileClientDrawer from './components/MobileClientDrawer';
-import Sidebar from './components/Sidebar';
-import ProjectFilter from './components/ProjectFilter';
+import LoadingSpinner from './components/LoadingSpinner';
+// 모바일 및 레이아웃 컴포넌트들
+const MobileBottomNav = lazy(() => import('./components/MobileBottomNav'));
+const MobileHeader = lazy(() => import('./components/MobileHeader'));
+const MobileClientDrawer = lazy(() => import('./components/MobileClientDrawer'));
+const Sidebar = lazy(() => import('./components/Sidebar'));
+const ProjectFilter = lazy(() => import('./components/ProjectFilter'));
 
 type ModalState = 
   | { type: 'NONE' }
@@ -45,7 +51,7 @@ type ModalState =
   | { type: 'AUTH' }
   | { type: 'TEAM_MANAGEMENT' };
 
-type ViewMode = 'dashboard' | 'team-dashboard' | 'company-dashboard' | 'calendar' | 'projects';
+type ViewMode = 'dashboard' | 'calendar' | 'projects';
 
 function App() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -141,25 +147,34 @@ function App() {
     }
   }, [isFirebaseMode, currentUser, isSearchActive]);
 
-  const selectedClient = filteredClients.find(c => c.id === selectedClientId);
+  const selectedClient = useMemo(() => 
+    filteredClients.find(c => c.id === selectedClientId), 
+    [filteredClients, selectedClientId]
+  );
   
   // 새로운 구조에서 프로젝트 찾기 (모든 의뢰자의 프로젝트에서 검색)
-  const selectedProject = selectedClient?.requesters
-    .flatMap(r => r.projects)
-    .find(p => p.id === selectedProjectId);
+  const selectedProject = useMemo(() => 
+    selectedClient?.requesters
+      .flatMap(r => r.projects)
+      .find(p => p.id === selectedProjectId),
+    [selectedClient, selectedProjectId]
+  );
     
   // 선택된 프로젝트의 의뢰자 찾기
-  const selectedRequester = selectedClient?.requesters
-    .find(r => r.projects.some(p => p.id === selectedProjectId));
+  const selectedRequester = useMemo(() => 
+    selectedClient?.requesters
+      .find(r => r.projects.some(p => p.id === selectedProjectId)),
+    [selectedClient, selectedProjectId]
+  );
 
-  const handleSelectClient = (clientId: string) => {
+  const handleSelectClient = useCallback((clientId: string) => {
     setSelectedClientId(clientId);
     setSelectedProjectId(null); // 고객사 선택 시 프로젝트는 선택하지 않음
-  };
+  }, []);
   
-  const handleSelectProject = (projectId: string) => {
+  const handleSelectProject = useCallback((projectId: string) => {
     setSelectedProjectId(projectId);
-  };
+  }, []);
   
   const handleAddClient = (clientData: Omit<Client, 'id' | 'requesters'>) => {
     const newClient: Client = {
@@ -598,51 +613,23 @@ function App() {
                   }`}
                 >
                   <span className="flex items-center gap-2">
-                    📊 <span>내 대시보드</span>
+                    📊 <span>통합 대시보드</span>
                   </span>
                 </button>
                 
                 {isFirebaseMode && currentUser && (
-                  <>
-                    <button
-                      onClick={() => setViewMode('team-dashboard')}
-                      className={`px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
-                        viewMode === 'team-dashboard'
-                          ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/25'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/80 hover:shadow-md'
-                      }`}
-                    >
-                      <span className="flex items-center gap-2">
-                        👥 <span>팀 대시보드</span>
-                      </span>
-                    </button>
-                    
-                    <button
-                      onClick={() => setViewMode('company-dashboard')}
-                      className={`px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
-                        viewMode === 'company-dashboard'
-                          ? 'bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-lg shadow-purple-500/25'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/80 hover:shadow-md'
-                      }`}
-                    >
-                      <span className="flex items-center gap-2">
-                        🏢 <span>전체 대시보드</span>
-                      </span>
-                    </button>
-                    
-                    <button
-                      onClick={() => setViewMode('calendar')}
-                      className={`px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
-                        viewMode === 'calendar'
-                          ? 'bg-gradient-to-r from-orange-600 to-red-600 text-white shadow-lg shadow-orange-500/25'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/80 hover:shadow-md'
-                      }`}
-                    >
-                      <span className="flex items-center gap-2">
-                        📅 <span>일정 관리</span>
-                      </span>
-                    </button>
-                  </>
+                  <button
+                    onClick={() => setViewMode('calendar')}
+                    className={`px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
+                      viewMode === 'calendar'
+                        ? 'bg-gradient-to-r from-orange-600 to-red-600 text-white shadow-lg shadow-orange-500/25'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/80 hover:shadow-md'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      📅 <span>일정 관리</span>
+                    </span>
+                  </button>
                 )}
                 
                 <button
@@ -727,18 +714,15 @@ function App() {
             }}></div>
           </div>
           <div className="relative z-10">
-          {viewMode === 'dashboard' ? (
-            <Dashboard clients={clients} />
-          ) : viewMode === 'team-dashboard' ? (
-            <TeamDashboard clients={clients} currentUser={currentUser} />
-          ) : viewMode === 'company-dashboard' ? (
-            <CompanyDashboard clients={clients} currentUser={currentUser} />
-          ) : viewMode === 'calendar' ? (
-            <Calendar 
-              currentUser={currentUser} 
-              viewScope={currentUser ? 'team' : 'personal'} 
-            />
-          ) : (
+          <Suspense fallback={<LoadingSpinner size="lg" message="컴포넌트를 불러오는 중..." />}>
+            {viewMode === 'dashboard' ? (
+              <UnifiedDashboard clients={clients} currentUser={currentUser} />
+            ) : viewMode === 'calendar' ? (
+              <Calendar 
+                currentUser={currentUser} 
+                viewScope={currentUser ? 'team' : 'personal'} 
+              />
+            ) : (
             <div className="space-y-6">
               {/* 메뉴별 콘텐츠 */}
               {selectedMenu === 'my-projects' ? (
@@ -857,104 +841,110 @@ function App() {
               )}
             </div>
           )}
+          </Suspense>
           </div>
         </div>
       </main>
 
-      <Modal 
-        isOpen={modalState.type === 'ADD_CLIENT'} 
-        onClose={() => setModalState({ type: 'NONE' })} 
-        title="새 고객사 추가"
-      >
-        <ClientForm onSave={handleAddClient} onCancel={() => setModalState({ type: 'NONE' })} />
-      </Modal>
+      {/* 모든 모달들을 Suspense로 감싸기 */}
+      <Suspense fallback={<LoadingSpinner message="폼을 불러오는 중..." />}>
+        <Modal 
+          isOpen={modalState.type === 'ADD_CLIENT'} 
+          onClose={() => setModalState({ type: 'NONE' })} 
+          title="새 고객사 추가"
+        >
+          <ClientForm onSave={handleAddClient} onCancel={() => setModalState({ type: 'NONE' })} />
+        </Modal>
 
-      <Modal 
-        isOpen={modalState.type === 'ADD_REQUESTER'} 
-        onClose={() => setModalState({ type: 'NONE' })} 
-        title="새 의뢰자 추가"
-      >
-        <RequesterForm onSave={handleAddRequester} onCancel={() => setModalState({ type: 'NONE' })} />
-      </Modal>
+        <Modal 
+          isOpen={modalState.type === 'ADD_REQUESTER'} 
+          onClose={() => setModalState({ type: 'NONE' })} 
+          title="새 의뢰자 추가"
+        >
+          <RequesterForm onSave={handleAddRequester} onCancel={() => setModalState({ type: 'NONE' })} />
+        </Modal>
 
-      <Modal 
-        isOpen={modalState.type === 'ADD_PROJECT'} 
-        onClose={() => setModalState({ type: 'NONE' })} 
-        title="새 프로젝트 추가"
-      >
-        <ProjectForm 
-          onSave={handleAddProject} 
-          onCancel={() => setModalState({ type: 'NONE' })} 
-          requesters={selectedClient?.requesters || []}
+        <Modal 
+          isOpen={modalState.type === 'ADD_PROJECT'} 
+          onClose={() => setModalState({ type: 'NONE' })} 
+          title="새 프로젝트 추가"
+        >
+          <ProjectForm 
+            onSave={handleAddProject} 
+            onCancel={() => setModalState({ type: 'NONE' })} 
+            requesters={selectedClient?.requesters || []}
+          />
+        </Modal>
+
+        <Modal 
+          isOpen={modalState.type === 'EDIT_PROJECT'} 
+          onClose={() => setModalState({ type: 'NONE' })} 
+          title="프로젝트 정보 수정"
+        >
+          <ProjectForm 
+            onSave={handleEditProject} 
+            onCancel={() => setModalState({ type: 'NONE' })} 
+            requesters={clients.find(c => c.id === selectedClientId)?.requesters || []}
+            initialData={modalState.type === 'EDIT_PROJECT' ? modalState.project : undefined}
+            initialRequesterId={modalState.type === 'EDIT_PROJECT' ? modalState.requesterId : undefined}
+          />
+        </Modal>
+        
+        <Modal
+          isOpen={modalState.type === 'ADD_TEST' || modalState.type === 'EDIT_TEST'}
+          onClose={() => setModalState({ type: 'NONE' })}
+          title={modalState.type === 'ADD_TEST' ? '새 시험 추가' : '시험 정보 수정'}
+        >
+          <TestForm
+              onSave={handleSaveTest}
+              onCancel={() => setModalState({ type: 'NONE' })}
+              initialData={modalState.type === 'EDIT_TEST' ? modalState.test : undefined}
+              defaultProjectNumber={selectedProject?.projectNumber || selectedProject?.id}
+          />
+        </Modal>
+
+        <Modal
+          isOpen={modalState.type === 'DATA_MANAGEMENT'}
+          onClose={() => setModalState({ type: 'NONE' })}
+          title="데이터 관리"
+        >
+          <DataManagement
+            clients={clients}
+            onDataImport={handleDataImport}
+          />
+        </Modal>
+
+        <Modal
+          isOpen={modalState.type === 'PRINT_REPORT'}
+          onClose={() => setModalState({ type: 'NONE' })}
+          title="리포트 출력"
+        >
+          <PrintReport
+            clients={clients}
+            selectedClient={selectedClient}
+            selectedProject={selectedProject}
+          />
+        </Modal>
+
+        <AuthModal
+          isOpen={modalState.type === 'AUTH'}
+          onClose={() => setModalState({ type: 'NONE' })}
+          onSuccess={() => {
+            // 로그인 성공 시 자동으로 Firebase 모드 활성화 (이미 useEffect에서 처리됨)
+            setModalState({ type: 'NONE' });
+          }}
         />
-      </Modal>
 
-      <Modal 
-        isOpen={modalState.type === 'EDIT_PROJECT'} 
-        onClose={() => setModalState({ type: 'NONE' })} 
-        title="프로젝트 정보 수정"
-      >
-        <ProjectForm 
-          onSave={handleEditProject} 
-          onCancel={() => setModalState({ type: 'NONE' })} 
-          requesters={clients.find(c => c.id === selectedClientId)?.requesters || []}
-          initialData={modalState.type === 'EDIT_PROJECT' ? modalState.project : undefined}
-          initialRequesterId={modalState.type === 'EDIT_PROJECT' ? modalState.requesterId : undefined}
-        />
-      </Modal>
-      
-      <Modal
-        isOpen={modalState.type === 'ADD_TEST' || modalState.type === 'EDIT_TEST'}
-        onClose={() => setModalState({ type: 'NONE' })}
-        title={modalState.type === 'ADD_TEST' ? '새 시험 추가' : '시험 정보 수정'}
-      >
-        <TestForm
-            onSave={handleSaveTest}
-            onCancel={() => setModalState({ type: 'NONE' })}
-            initialData={modalState.type === 'EDIT_TEST' ? modalState.test : undefined}
-            defaultProjectNumber={selectedProject?.projectNumber || selectedProject?.id}
-        />
-      </Modal>
+        <Modal
+          isOpen={modalState.type === 'TEAM_MANAGEMENT'}
+          onClose={() => setModalState({ type: 'NONE' })}
+          title="팀 관리"
+        >
+          <TeamManagement currentUser={currentUser} />
+        </Modal>
+      </Suspense>
 
-      <Modal
-        isOpen={modalState.type === 'DATA_MANAGEMENT'}
-        onClose={() => setModalState({ type: 'NONE' })}
-        title="데이터 관리"
-      >
-        <DataManagement
-          clients={clients}
-          onDataImport={handleDataImport}
-        />
-      </Modal>
 
-      <Modal
-        isOpen={modalState.type === 'PRINT_REPORT'}
-        onClose={() => setModalState({ type: 'NONE' })}
-        title="리포트 출력"
-      >
-        <PrintReport
-          clients={clients}
-          selectedClient={selectedClient}
-          selectedProject={selectedProject}
-        />
-      </Modal>
-
-      <AuthModal
-        isOpen={modalState.type === 'AUTH'}
-        onClose={() => setModalState({ type: 'NONE' })}
-        onSuccess={() => {
-          // 로그인 성공 시 자동으로 Firebase 모드 활성화 (이미 useEffect에서 처리됨)
-          setModalState({ type: 'NONE' });
-        }}
-      />
-
-      <Modal
-        isOpen={modalState.type === 'TEAM_MANAGEMENT'}
-        onClose={() => setModalState({ type: 'NONE' })}
-        title="팀 관리"
-      >
-        <TeamManagement currentUser={currentUser} />
-      </Modal>
 
       {/* 모바일 하단 네비게이션 */}
       {isMobile && (

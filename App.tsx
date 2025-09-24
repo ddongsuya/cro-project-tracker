@@ -7,7 +7,7 @@ const UnifiedDashboard = lazy(() => import('./components/UnifiedDashboard'));
 
 // 지연 로딩 컴포넌트들
 const ClientList = lazy(() => import('./components/ClientList'));
-const SafeProjectView = lazy(() => import('./components/SafeProjectView'));
+const StableProjectView = lazy(() => import('./components/StableProjectView'));
 const ProjectList = lazy(() => import('./components/ProjectList'));
 const SearchAndFilter = lazy(() => import('./components/SearchAndFilter'));
 const DataManagement = lazy(() => import('./components/DataManagement'));
@@ -755,7 +755,7 @@ function App() {
                   {/* 프로젝트 타임라인 */}
                   <div className="lg:col-span-2">
                     {selectedProject ? (
-                      <SafeProjectView
+                      <StableProjectView
                         project={selectedProject}
                         onUpdateProject={handleUpdateProject}
                         onAddTest={() => setModalState({ type: 'ADD_TEST' })}
